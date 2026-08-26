@@ -13,3 +13,8 @@ report.md
 *.tfstate.*
 *.json.key
 
+.coverage
+coverage.xml
+htmlcov/
+.ruff_cache/
+*-report.md
