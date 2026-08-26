@@ -19,7 +19,12 @@ def _finding_for_privileged_grant(grant: Grant) -> Finding:
         principal=grant.principal,
         resource=grant.target.name,
         description="A principal has a broad primitive role that exceeds typical least-privilege requirements.",
-        attack_path=(grant.principal, grant.role, grant.target.name, "Broad resource control"),
+        attack_path=(
+            grant.principal,
+            grant.role,
+            grant.target.name,
+            "Broad resource control",
+        ),
         evidence=(grant.evidence(),),
         remediation="Replace primitive roles with predefined or custom roles containing only required permissions.",
         references=("CIS Google Cloud Foundations 1.0",),
@@ -34,7 +39,9 @@ def _direct_findings(index: AccessIndex) -> list[Finding]:
         # inherited impact remains available to the attack-path analysis.
         for binding in resource.bindings:
             for principal in binding.members:
-                grant = Grant(principal, binding.role, resource, resource, binding.condition)
+                grant = Grant(
+                    principal, binding.role, resource, resource, binding.condition
+                )
                 key = (grant.principal, grant.role, grant.target.name)
                 if key in seen:
                     continue
@@ -42,43 +49,76 @@ def _direct_findings(index: AccessIndex) -> list[Finding]:
                 if grant.role in PRIVILEGED_ROLES:
                     findings.append(_finding_for_privileged_grant(grant))
                 if grant.principal in PUBLIC_PRINCIPALS:
-                    findings.append(Finding(
-                    rule_id="GCP-IAM-002",
-                    title="Public or globally authenticated access",
-                    severity="critical" if grant.principal == "allUsers" else "high",
-                    principal=grant.principal,
-                    resource=grant.target.name,
-                    description="The IAM binding grants access to a public principal.",
-                    attack_path=(grant.principal, grant.role, grant.target.name),
-                    evidence=(grant.evidence(),),
-                    remediation="Remove the public member and grant the minimum role to explicitly identified principals.",
-                    ))
+                    findings.append(
+                        Finding(
+                            rule_id="GCP-IAM-002",
+                            title="Public or globally authenticated access",
+                            severity="critical"
+                            if grant.principal == "allUsers"
+                            else "high",
+                            principal=grant.principal,
+                            resource=grant.target.name,
+                            description="The IAM binding grants access to a public principal.",
+                            attack_path=(
+                                grant.principal,
+                                grant.role,
+                                grant.target.name,
+                            ),
+                            evidence=(grant.evidence(),),
+                            remediation="Remove the public member and grant the minimum role to explicitly identified principals.",
+                        )
+                    )
                 # Owner already explains unrestricted privilege at this scope;
                 # narrower derivative findings would only add report noise.
                 if grant.role == "roles/owner":
                     continue
                 permission_rules = (
-                    ("resourcemanager.projects.setIamPolicy", "GCP-IAM-003", "IAM policy modification", "critical", "A principal can change project IAM bindings and grant additional access."),
-                    ("iam.serviceAccountKeys.create", "GCP-IAM-004", "Service-account key creation", "high", "A principal can create long-lived credentials for a service account."),
+                    (
+                        "resourcemanager.projects.setIamPolicy",
+                        "GCP-IAM-003",
+                        "IAM policy modification",
+                        "critical",
+                        "A principal can change project IAM bindings and grant additional access.",
+                    ),
+                    (
+                        "iam.serviceAccountKeys.create",
+                        "GCP-IAM-004",
+                        "Service-account key creation",
+                        "high",
+                        "A principal can create long-lived credentials for a service account.",
+                    ),
                 )
-                for permission, rule_id, title, severity, description in permission_rules:
+                for (
+                    permission,
+                    rule_id,
+                    title,
+                    severity,
+                    description,
+                ) in permission_rules:
                     if not role_has_permission(grant.role, permission):
                         continue
                     dedupe = (rule_id, grant.principal, grant.target.name)
                     if dedupe in seen:
                         continue
                     seen.add(dedupe)
-                    findings.append(Finding(
-                    rule_id=rule_id,
-                    title=title,
-                    severity=severity,
-                    principal=grant.principal,
-                    resource=grant.target.name,
-                    description=description,
-                    attack_path=(grant.principal, permission, grant.target.name, "Privilege expansion"),
-                    evidence=(grant.evidence(),),
-                    remediation="Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
-                    ))
+                    findings.append(
+                        Finding(
+                            rule_id=rule_id,
+                            title=title,
+                            severity=severity,
+                            principal=grant.principal,
+                            resource=grant.target.name,
+                            description=description,
+                            attack_path=(
+                                grant.principal,
+                                permission,
+                                grant.target.name,
+                                "Privilege expansion",
+                            ),
+                            evidence=(grant.evidence(),),
+                            remediation="Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+                        )
+                    )
     return findings
 
 
@@ -116,23 +156,38 @@ def _impersonation_findings(index: AccessIndex) -> list[Finding]:
             current, path, evidence = queue.popleft()
             if current != start and current in privileged:
                 for target_grant in privileged[current]:
-                    findings.append(Finding(
-                        rule_id="GCP-IAM-005",
-                        title="Service-account impersonation reaches a privileged role",
-                        severity="critical",
-                        principal=start,
-                        resource=target_grant.target.name,
-                        description="The principal can obtain short-lived credentials for a service account with broad access.",
-                        attack_path=tuple([*path, target_grant.role, target_grant.target.name]),
-                        evidence=tuple([*evidence, target_grant.evidence()]),
-                        remediation="Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
-                        references=("MITRE ATT&CK T1078.004",),
-                    ))
+                    findings.append(
+                        Finding(
+                            rule_id="GCP-IAM-005",
+                            title="Service-account impersonation reaches a privileged role",
+                            severity="critical",
+                            principal=start,
+                            resource=target_grant.target.name,
+                            description="The principal can obtain short-lived credentials for a service account with broad access.",
+                            attack_path=(
+                                *path,
+                                target_grant.role,
+                                target_grant.target.name,
+                            ),
+                            evidence=(
+                                *evidence,
+                                target_grant.evidence(),
+                            ),
+                            remediation="Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
+                            references=("MITRE ATT&CK T1078.004",),
+                        )
+                    )
                 continue
             for target, grant in edges.get(current, []):
                 if target not in visited:
                     visited.add(target)
-                    queue.append((target, [*path, "impersonates", target], [*evidence, grant.evidence()]))
+                    queue.append(
+                        (
+                            target,
+                            [*path, "impersonates", target],
+                            [*evidence, grant.evidence()],
+                        )
+                    )
     return findings
 
 
@@ -142,4 +197,7 @@ def analyze(resources: list[Resource]) -> list[Finding]:
     findings = [*_direct_findings(index), *_impersonation_findings(index)]
     severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     unique = {(f.rule_id, f.principal, f.resource, f.attack_path): f for f in findings}
-    return sorted(unique.values(), key=lambda f: (severity_rank[f.severity], f.rule_id, f.principal, f.resource))
+    return sorted(
+        unique.values(),
+        key=lambda f: (severity_rank[f.severity], f.rule_id, f.principal, f.resource),
+    )

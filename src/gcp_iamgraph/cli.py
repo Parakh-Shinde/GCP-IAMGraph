@@ -10,11 +10,15 @@ from .reporting import as_json, as_markdown, build_report
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Analyze GCP IAM data for dangerous access and attack paths")
+    parser = argparse.ArgumentParser(
+        description="Analyze GCP IAM data for dangerous access and attack paths"
+    )
     parser.add_argument("input", help="Path to a GCP IAMGraph JSON environment")
     parser.add_argument("--format", choices=("json", "markdown"), default="json")
     parser.add_argument("--output", help="Write the report to this file")
-    parser.add_argument("--fail-on", choices=("none", "high", "critical"), default="none")
+    parser.add_argument(
+        "--fail-on", choices=("none", "high", "critical"), default="none"
+    )
     return parser
 
 
@@ -42,4 +46,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

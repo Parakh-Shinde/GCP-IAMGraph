@@ -35,21 +35,22 @@ def as_markdown(report: dict[str, object]) -> str:
         "",
     ]
     for finding in report["findings"]:
-        lines.extend([
-            f"## [{finding['severity'].upper()}] {finding['title']}",
-            "",
-            f"**Rule:** `{finding['rule_id']}`  ",
-            f"**Principal:** `{finding['principal']}`  ",
-            f"**Resource:** `{finding['resource']}`  ",
-            f"**Attack path:** {' → '.join(finding['attack_path'])}",
-            "",
-            finding["description"],
-            "",
-            "**Evidence**",
-            *[f"- {item}" for item in finding["evidence"]],
-            "",
-            f"**Remediation:** {finding['remediation']}",
-            "",
-        ])
+        lines.extend(
+            [
+                f"## [{finding['severity'].upper()}] {finding['title']}",
+                "",
+                f"**Rule:** `{finding['rule_id']}`  ",
+                f"**Principal:** `{finding['principal']}`  ",
+                f"**Resource:** `{finding['resource']}`  ",
+                f"**Attack path:** {' → '.join(finding['attack_path'])}",
+                "",
+                finding["description"],
+                "",
+                "**Evidence**",
+                *[f"- {item}" for item in finding["evidence"]],
+                "",
+                f"**Remediation:** {finding['remediation']}",
+                "",
+            ]
+        )
     return "\n".join(lines)
-

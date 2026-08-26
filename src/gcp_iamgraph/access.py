@@ -22,7 +22,9 @@ class Grant:
     def evidence(self) -> str:
         origin = f" inherited from {self.source.name}" if self.inherited else ""
         condition = " with a condition" if self.condition else ""
-        return f"{self.principal} has {self.role} on {self.target.name}{origin}{condition}"
+        return (
+            f"{self.principal} has {self.role} on {self.target.name}{origin}{condition}"
+        )
 
 
 class AccessIndex:
@@ -44,13 +46,21 @@ class AccessIndex:
             if grant.principal == principal
         ]
 
-    def has_permission(self, principal: str, resource_name: str, permission: str) -> list[Grant]:
+    def has_permission(
+        self, principal: str, resource_name: str, permission: str
+    ) -> list[Grant]:
         return [
-            grant for grant in self.grants_on(resource_name)
-            if grant.principal == principal and role_has_permission(grant.role, permission)
+            grant
+            for grant in self.grants_on(resource_name)
+            if grant.principal == principal
+            and role_has_permission(grant.role, permission)
         ]
 
     @staticmethod
-    def _binding_grants(binding: Binding, target: Resource, source: Resource) -> list[Grant]:
-        return [Grant(member, binding.role, target, source, binding.condition) for member in binding.members]
-
+    def _binding_grants(
+        binding: Binding, target: Resource, source: Resource
+    ) -> list[Grant]:
+        return [
+            Grant(member, binding.role, target, source, binding.condition)
+            for member in binding.members
+        ]

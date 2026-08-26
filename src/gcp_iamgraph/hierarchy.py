@@ -23,8 +23,10 @@ class Hierarchy:
 
     def descendants(self, resource_name: str) -> list[Resource]:
         return [
-            item for item in self.resources.values()
-            if resource_name in {ancestor.name for ancestor in self.ancestors(item.name)}
+            item
+            for item in self.resources.values()
+            if resource_name
+            in {ancestor.name for ancestor in self.ancestors(item.name)}
         ]
 
     def _assert_acyclic(self) -> None:
@@ -33,7 +35,8 @@ class Hierarchy:
             current = resource
             while current.parent:
                 if current.parent in seen:
-                    raise ValueError(f"Resource hierarchy contains a cycle at '{current.parent}'")
+                    raise ValueError(
+                        f"Resource hierarchy contains a cycle at '{current.parent}'"
+                    )
                 seen.add(current.parent)
                 current = self.resources[current.parent]
-
