@@ -4,7 +4,10 @@ from dataclasses import dataclass
 
 from .hierarchy import Hierarchy
 from .models import Binding, Resource
-from .roles import role_has_permission
+from .roles import (
+    DEFAULT_ROLE_CATALOG,
+    RoleCatalog,
+)
 
 
 @dataclass(frozen=True)
@@ -22,23 +25,48 @@ class Grant:
     def evidence(self) -> str:
         origin = f" inherited from {self.source.name}" if self.inherited else ""
         condition = " with a condition" if self.condition else ""
+
         return (
             f"{self.principal} has {self.role} on {self.target.name}{origin}{condition}"
         )
 
 
 class AccessIndex:
-    def __init__(self, hierarchy: Hierarchy):
-        self.hierarchy = hierarchy
+    """Indexes effective access across the GCP hierarchy."""
 
-    def grants_on(self, resource_name: str) -> list[Grant]:
+    def __init__(
+        self,
+        hierarchy: Hierarchy,
+        catalog: RoleCatalog | None = None,
+    ) -> None:
+        self.hierarchy = hierarchy
+        self.catalog = catalog if catalog is not None else DEFAULT_ROLE_CATALOG
+
+    def grants_on(
+        self,
+        resource_name: str,
+    ) -> list[Grant]:
         target = self.hierarchy.resources[resource_name]
         grants: list[Grant] = []
-        for source, binding in self.hierarchy.effective_bindings(resource_name):
-            grants.extend(self._binding_grants(binding, target, source))
+
+        for (
+            source,
+            binding,
+        ) in self.hierarchy.effective_bindings(resource_name):
+            grants.extend(
+                self._binding_grants(
+                    binding,
+                    target,
+                    source,
+                )
+            )
+
         return grants
 
-    def grants_for(self, principal: str) -> list[Grant]:
+    def grants_for(
+        self,
+        principal: str,
+    ) -> list[Grant]:
         return [
             grant
             for name in self.hierarchy.resources
@@ -47,20 +75,36 @@ class AccessIndex:
         ]
 
     def has_permission(
-        self, principal: str, resource_name: str, permission: str
+        self,
+        principal: str,
+        resource_name: str,
+        permission: str,
     ) -> list[Grant]:
         return [
             grant
             for grant in self.grants_on(resource_name)
-            if grant.principal == principal
-            and role_has_permission(grant.role, permission)
+            if (
+                grant.principal == principal
+                and self.catalog.has_permission(
+                    grant.role,
+                    permission,
+                )
+            )
         ]
 
     @staticmethod
     def _binding_grants(
-        binding: Binding, target: Resource, source: Resource
+        binding: Binding,
+        target: Resource,
+        source: Resource,
     ) -> list[Grant]:
         return [
-            Grant(member, binding.role, target, source, binding.condition)
+            Grant(
+                member,
+                binding.role,
+                target,
+                source,
+                binding.condition,
+            )
             for member in binding.members
         ]
