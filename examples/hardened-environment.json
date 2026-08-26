@@ -1,0 +1,20 @@
+{
+  "resources": [
+    {
+      "name": "organizations/987654321",
+      "type": "organization",
+      "display_name": "hardened-lab",
+      "bindings": []
+    },
+    {
+      "name": "projects/logging-prod",
+      "type": "project",
+      "display_name": "logging-prod",
+      "parent": "organizations/987654321",
+      "bindings": [
+        {"role": "roles/logging.viewer", "members": ["group:soc-analysts@example.test"]}
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,50 @@
+{
+  "resources": [
+    {
+      "name": "organizations/123456789",
+      "type": "organization",
+      "display_name": "example-security-lab",
+      "bindings": [
+        {"role": "roles/viewer", "members": ["group:auditors@example.test"]}
+      ]
+    },
+    {
+      "name": "folders/engineering",
+      "type": "folder",
+      "display_name": "engineering",
+      "parent": "organizations/123456789",
+      "bindings": [
+        {"role": "roles/editor", "members": ["group:developers@example.test"]}
+      ]
+    },
+    {
+      "name": "projects/payments-prod",
+      "type": "project",
+      "display_name": "payments-prod",
+      "parent": "folders/engineering",
+      "bindings": [
+        {"role": "roles/owner", "members": ["serviceAccount:deployment@payments-prod.iam.gserviceaccount.com"]},
+        {"role": "roles/resourcemanager.projectIamAdmin", "members": ["user:iam-operator@example.test"]},
+        {"role": "roles/iam.serviceAccountKeyAdmin", "members": ["user:contractor@example.test"]},
+        {"role": "roles/storage.objectViewer", "members": ["allUsers"]}
+      ]
+    },
+    {
+      "name": "projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
+      "type": "service_account",
+      "display_name": "deployment@payments-prod.iam.gserviceaccount.com",
+      "parent": "projects/payments-prod",
+      "bindings": [
+        {"role": "roles/iam.serviceAccountTokenCreator", "members": ["user:developer@example.test"]}
+      ]
+    },
+    {
+      "name": "projects/payments-prod/buckets/payment-exports",
+      "type": "storage_bucket",
+      "display_name": "payment-exports",
+      "parent": "projects/payments-prod",
+      "bindings": []
+    }
+  ]
+}
+
