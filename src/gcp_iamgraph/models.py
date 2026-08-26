@@ -11,11 +11,40 @@ class Binding:
     condition: dict[str, Any] | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Binding":
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+    ) -> Binding:
         return cls(
             role=data["role"],
             members=tuple(data.get("members", [])),
             condition=data.get("condition"),
+        )
+
+
+@dataclass(frozen=True)
+class RoleDefinition:
+    """A predefined or custom GCP IAM role."""
+
+    name: str
+    title: str
+    permissions: frozenset[str]
+    stage: str = "GA"
+    is_custom: bool = True
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+    ) -> RoleDefinition:
+        name = data["name"]
+
+        return cls(
+            name=name,
+            title=data.get("title", name),
+            permissions=frozenset(data.get("permissions", [])),
+            stage=data.get("stage", "GA"),
+            is_custom=not name.startswith("roles/"),
         )
 
 
@@ -28,13 +57,21 @@ class Resource:
     bindings: tuple[Binding, ...] = ()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Resource":
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+    ) -> Resource:
         return cls(
             name=data["name"],
             resource_type=data["type"],
-            display_name=data.get("display_name", data["name"]),
+            display_name=data.get(
+                "display_name",
+                data["name"],
+            ),
             parent=data.get("parent"),
-            bindings=tuple(Binding.from_dict(item) for item in data.get("bindings", [])),
+            bindings=tuple(
+                Binding.from_dict(item) for item in data.get("bindings", [])
+            ),
         )
 
 
@@ -64,4 +101,3 @@ class Finding:
             "remediation": self.remediation,
             "references": list(self.references),
         }
-
