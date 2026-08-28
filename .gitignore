@@ -18,3 +18,4 @@ coverage.xml
 htmlcov/
 .ruff_cache/
 *-report.md
+!docs/demo-output/*-report.md
