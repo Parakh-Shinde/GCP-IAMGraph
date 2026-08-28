@@ -509,6 +509,97 @@ def _iam_policy_escalation_findings(
     return findings
 
 
+def _privileged_service_account_key_findings(
+    index: AccessIndex,
+) -> list[Finding]:
+    """Detect key creation for a privileged service account."""
+
+    findings: list[Finding] = []
+    privileged = _privileged_targets(index)
+    seen: set[tuple[str, str, str]] = set()
+    permission = "iam.serviceAccountKeys.create"
+
+    for resource in index.hierarchy.resources.values():
+        if resource.resource_type != "service_account":
+            continue
+
+        service_account_principal = f"serviceAccount:{resource.display_name}"
+
+        privileged_grants = privileged.get(
+            service_account_principal,
+            [],
+        )
+
+        if not privileged_grants:
+            continue
+
+        key_creation_grants = [
+            grant
+            for grant in index.grants_on(resource.name)
+            if (
+                grant.principal != service_account_principal
+                and index.catalog.has_permission(
+                    grant.role,
+                    permission,
+                )
+            )
+        ]
+
+        for key_grant in key_creation_grants:
+            for privileged_grant in privileged_grants:
+                dedupe = (
+                    key_grant.principal,
+                    resource.name,
+                    privileged_grant.target.name,
+                )
+
+                if dedupe in seen:
+                    continue
+
+                seen.add(dedupe)
+
+                findings.append(
+                    Finding(
+                        rule_id="GCP-IAM-008",
+                        title=("Key creation reaches a privileged service account"),
+                        severity="critical",
+                        principal=key_grant.principal,
+                        resource=(privileged_grant.target.name),
+                        description=(
+                            "The principal can create a "
+                            "long-lived key for a service "
+                            "account that has a broad "
+                            "primitive role."
+                        ),
+                        attack_path=(
+                            key_grant.principal,
+                            permission,
+                            service_account_principal,
+                            ("create long-lived credential"),
+                            privileged_grant.role,
+                            privileged_grant.target.name,
+                            "Project compromise",
+                        ),
+                        evidence=(
+                            key_grant.evidence(),
+                            privileged_grant.evidence(),
+                        ),
+                        remediation=(
+                            "Remove unnecessary service-"
+                            "account key creation access. "
+                            "Use short-lived credentials, "
+                            "workload identity federation, "
+                            "and organization policies "
+                            "that disable service-account "
+                            "key creation."
+                        ),
+                        references=("MITRE ATT&CK T1098.001",),
+                    )
+                )
+
+    return findings
+
+
 def analyze(
     resources: list[Resource],
     role_definitions: Iterable[RoleDefinition] = (),
@@ -525,6 +616,7 @@ def analyze(
         *_impersonation_findings(index),
         *_actas_compute_findings(index),
         *_iam_policy_escalation_findings(index),
+        *_privileged_service_account_key_findings(index),
     ]
 
     severity_rank = {
