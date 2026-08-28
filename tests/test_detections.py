@@ -146,3 +146,64 @@ def test_set_iam_policy_can_escalate_to_project_owner():
         "grant roles/owner",
         "Project compromise",
     )
+
+
+def test_key_creation_reaches_privileged_service_account():
+    attacker = "user:attacker@example.test"
+    service_account = "serviceAccount:automation@payments-prod.iam.gserviceaccount.com"
+
+    project = Resource.from_dict(
+        {
+            "name": "projects/payments-prod",
+            "type": "project",
+            "display_name": "payments-prod",
+            "bindings": [
+                {
+                    "role": "roles/owner",
+                    "members": [service_account],
+                }
+            ],
+        }
+    )
+
+    automation_service_account = Resource.from_dict(
+        {
+            "name": (
+                "projects/payments-prod/"
+                "serviceAccounts/"
+                "automation@payments-prod."
+                "iam.gserviceaccount.com"
+            ),
+            "type": "service_account",
+            "display_name": ("automation@payments-prod.iam.gserviceaccount.com"),
+            "parent": "projects/payments-prod",
+            "bindings": [
+                {
+                    "role": ("roles/iam.serviceAccountKeyAdmin"),
+                    "members": [attacker],
+                }
+            ],
+        }
+    )
+
+    findings = analyze(
+        [
+            project,
+            automation_service_account,
+        ]
+    )
+
+    finding = next(item for item in findings if item.rule_id == "GCP-IAM-008")
+
+    assert finding.severity == "critical"
+    assert finding.principal == attacker
+    assert finding.resource == project.name
+    assert finding.attack_path == (
+        attacker,
+        "iam.serviceAccountKeys.create",
+        service_account,
+        "create long-lived credential",
+        "roles/owner",
+        project.name,
+        "Project compromise",
+    )
