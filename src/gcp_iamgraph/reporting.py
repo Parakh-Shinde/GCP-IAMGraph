@@ -27,11 +27,15 @@ SARIF_LEVELS = {
 def build_report(
     findings: list[Finding],
     resource_count: int,
+    source_path: str | None = None,
 ) -> dict[str, object]:
+    """Build a serializable security report."""
+
     return {
         "tool": TOOL_NAME,
         "version": TOOL_VERSION,
         "generated_at": (datetime.now(timezone.utc).isoformat()),
+        "source_path": (source_path or "gcp-iamgraph-input.json"),
         "summary": {
             "resources_analyzed": resource_count,
             "total_findings": len(findings),
@@ -44,6 +48,8 @@ def build_report(
 def as_json(
     report: dict[str, object],
 ) -> str:
+    """Render a report as JSON."""
+
     return json.dumps(
         report,
         indent=2,
@@ -53,6 +59,8 @@ def as_json(
 def as_markdown(
     report: dict[str, object],
 ) -> str:
+    """Render a report as Markdown."""
+
     summary = cast(
         dict[str, Any],
         report["summary"],
@@ -130,8 +138,14 @@ def _sarif_rule(
 
 def _sarif_result(
     finding: dict[str, Any],
+    source_path: str,
 ) -> dict[str, object]:
-    """Build one SARIF result."""
+    """Build one SARIF result with a physical location."""
+
+    source_uri = source_path.replace(
+        "\\",
+        "/",
+    )
 
     return {
         "ruleId": finding["rule_id"],
@@ -144,22 +158,31 @@ def _sarif_result(
         },
         "locations": [
             {
+                "physicalLocation": {
+                    "artifactLocation": {
+                        "uri": source_uri,
+                        "uriBaseId": "%SRCROOT%",
+                    },
+                    "region": {
+                        "startLine": 1,
+                    },
+                },
                 "logicalLocations": [
                     {
                         "name": finding["resource"],
                         "fullyQualifiedName": (finding["resource"]),
                         "kind": "resource",
                     }
-                ]
+                ],
             }
         ],
         "properties": {
             "severity": finding["severity"],
             "principal": finding["principal"],
             "resource": finding["resource"],
-            "attackPath": (finding["attack_path"]),
+            "attackPath": finding["attack_path"],
             "evidence": finding["evidence"],
-            "remediation": (finding["remediation"]),
+            "remediation": finding["remediation"],
             "references": finding["references"],
         },
     }
@@ -173,6 +196,13 @@ def as_sarif(
     findings = cast(
         list[dict[str, Any]],
         report["findings"],
+    )
+    source_path = cast(
+        str,
+        report.get(
+            "source_path",
+            "gcp-iamgraph-input.json",
+        ),
     )
 
     rules_by_id: dict[
@@ -200,7 +230,13 @@ def as_sarif(
                         ],
                     }
                 },
-                "results": [_sarif_result(finding) for finding in findings],
+                "results": [
+                    _sarif_result(
+                        finding,
+                        source_path,
+                    )
+                    for finding in findings
+                ],
             }
         ],
     }
