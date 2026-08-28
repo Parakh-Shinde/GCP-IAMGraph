@@ -15,13 +15,11 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             "storage.objects.create",
         }
     ),
-    "roles/resourcemanager.projectIamAdmin": (
-        frozenset(
-            {
-                "resourcemanager.projects.getIamPolicy",
-                "resourcemanager.projects.setIamPolicy",
-            }
-        )
+    "roles/resourcemanager.projectIamAdmin": frozenset(
+        {
+            "resourcemanager.projects.getIamPolicy",
+            "resourcemanager.projects.setIamPolicy",
+        }
     ),
     "roles/iam.securityAdmin": frozenset(
         {
@@ -37,23 +35,19 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             "iam.serviceAccounts.setIamPolicy",
         }
     ),
-    "roles/iam.serviceAccountKeyAdmin": (
-        frozenset(
-            {
-                "iam.serviceAccountKeys.create",
-                "iam.serviceAccountKeys.delete",
-            }
-        )
+    "roles/iam.serviceAccountKeyAdmin": frozenset(
+        {
+            "iam.serviceAccountKeys.create",
+            "iam.serviceAccountKeys.delete",
+        }
     ),
-    "roles/iam.serviceAccountTokenCreator": (
-        frozenset(
-            {
-                "iam.serviceAccounts.getAccessToken",
-                "iam.serviceAccounts.signBlob",
-                "iam.serviceAccounts.signJwt",
-                ("iam.serviceAccounts.implicitDelegation"),
-            }
-        )
+    "roles/iam.serviceAccountTokenCreator": frozenset(
+        {
+            "iam.serviceAccounts.getAccessToken",
+            "iam.serviceAccounts.signBlob",
+            "iam.serviceAccounts.signJwt",
+            "iam.serviceAccounts.implicitDelegation",
+        }
     ),
     "roles/iam.serviceAccountUser": frozenset(
         {
@@ -82,7 +76,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
 
 
 class RoleCatalog:
-    """Resolves predefined and custom GCP role permissions."""
+    """Resolve predefined and custom GCP role permissions."""
 
     def __init__(
         self,
@@ -124,7 +118,7 @@ def role_has_permission(
     permission: str,
     catalog: RoleCatalog | None = None,
 ) -> bool:
-    """Backward-compatible permission lookup."""
+    """Perform a backward-compatible permission lookup."""
 
     active_catalog = catalog if catalog is not None else DEFAULT_ROLE_CATALOG
 
