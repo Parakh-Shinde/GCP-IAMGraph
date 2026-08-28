@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .detections import analyze
+from .graph import build_attack_graph
 from .parser import (
     InputError,
     load_environment,
@@ -23,22 +25,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "input",
-        help="Path to a GCP IAMGraph JSON environment",
+        help=("Path to a GCP IAMGraph JSON environment"),
     )
     parser.add_argument(
         "--format",
-        choices=("json", "markdown"),
+        choices=(
+            "json",
+            "markdown",
+        ),
         default="json",
     )
     parser.add_argument(
         "--output",
-        help="Write the report to this file",
+        help="Write the security report to this file",
+    )
+    parser.add_argument(
+        "--graph-output",
+        help=("Write the generated attack graph as JSON to this file"),
     )
     parser.add_argument(
         "--fail-on",
-        choices=("none", "high", "critical"),
+        choices=(
+            "none",
+            "high",
+            "critical",
+        ),
         default="none",
     )
+
     return parser
 
 
@@ -61,10 +75,25 @@ def main(
         )
         return 2
 
+    if args.graph_output:
+        graph = build_attack_graph(findings)
+
+        graph_json = json.dumps(
+            graph,
+            indent=2,
+            sort_keys=True,
+        )
+
+        Path(args.graph_output).write_text(
+            graph_json + "\n",
+            encoding="utf-8",
+        )
+
     report = build_report(
         findings,
         len(resources),
     )
+
     rendered = as_markdown(report) if args.format == "markdown" else as_json(report)
 
     if args.output:
@@ -80,7 +109,12 @@ def main(
     if args.fail_on == "critical" and "critical" in severities:
         return 1
 
-    if args.fail_on == "high" and severities.intersection({"high", "critical"}):
+    if args.fail_on == "high" and severities.intersection(
+        {
+            "high",
+            "critical",
+        }
+    ):
         return 1
 
     return 0
