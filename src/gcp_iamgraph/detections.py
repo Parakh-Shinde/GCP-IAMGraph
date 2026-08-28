@@ -56,8 +56,6 @@ def _direct_findings(
     seen: set[tuple[str, str, str]] = set()
 
     for resource in index.hierarchy.resources.values():
-        # Direct findings are reported where the IAM
-        # binding is configured.
         for binding in resource.bindings:
             for principal in binding.members:
                 grant = Grant(
@@ -110,14 +108,14 @@ def _direct_findings(
                         )
                     )
 
-                # Owner already describes unrestricted
-                # privilege at this scope.
+                # Owner already represents unrestricted
+                # privilege at this resource scope.
                 if grant.role == "roles/owner":
                     continue
 
                 permission_rules = (
                     (
-                        "resourcemanager.projects.setIamPolicy",
+                        ("resourcemanager.projects.setIamPolicy"),
                         "GCP-IAM-003",
                         "IAM policy modification",
                         "critical",
@@ -128,7 +126,7 @@ def _direct_findings(
                         ),
                     ),
                     (
-                        "iam.serviceAccountKeys.create",
+                        ("iam.serviceAccountKeys.create"),
                         "GCP-IAM-004",
                         "Service-account key creation",
                         "high",
@@ -209,7 +207,7 @@ def _impersonation_edges(
         for grant in index.grants_on(resource.name):
             if index.catalog.has_permission(
                 grant.role,
-                "iam.serviceAccounts.getAccessToken",
+                ("iam.serviceAccounts.getAccessToken"),
             ):
                 edges[grant.principal].append(
                     (
@@ -281,7 +279,7 @@ def _impersonation_findings(
                             ),
                             severity="critical",
                             principal=start,
-                            resource=target_grant.target.name,
+                            resource=(target_grant.target.name),
                             description=(
                                 "The principal can obtain "
                                 "short-lived credentials "
@@ -310,7 +308,10 @@ def _impersonation_findings(
 
                 continue
 
-            for target, grant in edges.get(current, []):
+            for target, grant in edges.get(
+                current,
+                [],
+            ):
                 if target in visited:
                     continue
 
@@ -364,7 +365,7 @@ def _actas_compute_findings(
                 grant.principal != service_account_principal
                 and index.catalog.has_permission(
                     grant.role,
-                    "iam.serviceAccounts.actAs",
+                    ("iam.serviceAccounts.actAs"),
                 )
             )
         ]
@@ -394,7 +395,7 @@ def _actas_compute_findings(
                             rule_id="GCP-IAM-006",
                             title=("VM creation can use a privileged service account"),
                             severity="critical",
-                            principal=actas_grant.principal,
+                            principal=(actas_grant.principal),
                             resource=(privileged_grant.target.name),
                             description=(
                                 "The principal can create "
@@ -406,17 +407,17 @@ def _actas_compute_findings(
                             ),
                             attack_path=(
                                 actas_grant.principal,
-                                "compute.instances.create",
+                                ("compute.instances.create"),
                                 compute_grant.target.name,
-                                "iam.serviceAccounts.actAs",
+                                ("iam.serviceAccounts.actAs"),
                                 service_account_principal,
                                 privileged_grant.role,
-                                privileged_grant.target.name,
+                                (privileged_grant.target.name),
                             ),
                             evidence=(
                                 compute_grant.evidence(),
                                 actas_grant.evidence(),
-                                privileged_grant.evidence(),
+                                (privileged_grant.evidence()),
                             ),
                             remediation=(
                                 "Do not grant both Compute "
@@ -436,6 +437,78 @@ def _actas_compute_findings(
     return findings
 
 
+def _iam_policy_escalation_findings(
+    index: AccessIndex,
+) -> list[Finding]:
+    """Detect IAM policy modification leading to Owner access."""
+
+    findings: list[Finding] = []
+    seen: set[tuple[str, str]] = set()
+    permission = "resourcemanager.projects.setIamPolicy"
+
+    for resource in index.hierarchy.resources.values():
+        if resource.resource_type != "project":
+            continue
+
+        for grant in index.grants_on(resource.name):
+            # Owner is already reported by
+            # GCP-IAM-001 and does not need a
+            # separate escalation finding.
+            if grant.role == "roles/owner":
+                continue
+
+            if not index.catalog.has_permission(
+                grant.role,
+                permission,
+            ):
+                continue
+
+            dedupe = (
+                grant.principal,
+                resource.name,
+            )
+
+            if dedupe in seen:
+                continue
+
+            seen.add(dedupe)
+
+            findings.append(
+                Finding(
+                    rule_id="GCP-IAM-007",
+                    title=("IAM policy modification can escalate to project Owner"),
+                    severity="critical",
+                    principal=grant.principal,
+                    resource=resource.name,
+                    description=(
+                        "The principal can modify the "
+                        "project IAM policy and grant "
+                        "itself or another controlled "
+                        "identity the Owner role."
+                    ),
+                    attack_path=(
+                        grant.principal,
+                        permission,
+                        resource.name,
+                        "grant roles/owner",
+                        "Project compromise",
+                    ),
+                    evidence=(grant.evidence(),),
+                    remediation=(
+                        "Restrict project IAM policy "
+                        "modification to a controlled "
+                        "administrative identity. "
+                        "Require approval, audit IAM "
+                        "changes, and prevent direct "
+                        "Owner grants."
+                    ),
+                    references=("MITRE ATT&CK T1098",),
+                )
+            )
+
+    return findings
+
+
 def analyze(
     resources: list[Resource],
     role_definitions: Iterable[RoleDefinition] = (),
@@ -451,6 +524,7 @@ def analyze(
         *_direct_findings(index),
         *_impersonation_findings(index),
         *_actas_compute_findings(index),
+        *_iam_policy_escalation_findings(index),
     ]
 
     severity_rank = {
