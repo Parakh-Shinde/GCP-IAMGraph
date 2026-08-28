@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from itertools import pairwise
+from typing import cast
 
 from .models import Finding
 
@@ -91,3 +93,105 @@ def build_attack_graph(
             ),
         ),
     }
+
+
+def _dot_quote(value: str) -> str:
+    """Quote a string safely for Graphviz DOT."""
+
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+    )
+
+
+def as_dot(
+    graph: dict[str, object],
+) -> str:
+    """Render an attack graph using Graphviz DOT."""
+
+    nodes = cast(
+        list[dict[str, str]],
+        graph.get("nodes", []),
+    )
+    edges = cast(
+        list[dict[str, str]],
+        graph.get("edges", []),
+    )
+
+    node_styles = {
+        "principal": (
+            "ellipse",
+            "#DBEAFE",
+        ),
+        "role": (
+            "box",
+            "#FEF3C7",
+        ),
+        "resource": (
+            "folder",
+            "#DCFCE7",
+        ),
+        "permission": (
+            "diamond",
+            "#FCE7F3",
+        ),
+        "action": (
+            "box",
+            "#F3F4F6",
+        ),
+    }
+
+    severity_colours = {
+        "critical": "#DC2626",
+        "high": "#EA580C",
+        "medium": "#CA8A04",
+        "low": "#2563EB",
+    }
+
+    lines = [
+        'digraph "GCP IAMGraph" {',
+        '  rankdir="LR";',
+        ('  graph [fontname="Arial", bgcolor="white"];'),
+        ('  node [fontname="Arial", style="filled"];'),
+        ('  edge [fontname="Arial", fontsize="10"];'),
+    ]
+
+    for node in nodes:
+        node_id = node["id"]
+        label = node["label"]
+        kind = node["kind"]
+
+        shape, colour = node_styles.get(
+            kind,
+            node_styles["action"],
+        )
+
+        lines.append(
+            f"  {_dot_quote(node_id)} "
+            f"[label={_dot_quote(label)}, "
+            f'shape="{shape}", '
+            f'fillcolor="{colour}"];'
+        )
+
+    for edge in edges:
+        source = edge["source"]
+        target = edge["target"]
+        rule_id = edge["rule_id"]
+        severity = edge["severity"]
+
+        colour = severity_colours.get(
+            severity,
+            "#4B5563",
+        )
+        label = f"{rule_id} ({severity})"
+
+        lines.append(
+            f"  {_dot_quote(source)} -> "
+            f"{_dot_quote(target)} "
+            f"[label={_dot_quote(label)}, "
+            f'color="{colour}"];'
+        )
+
+    lines.append("}")
+
+    return "\n".join(lines) + "\n"

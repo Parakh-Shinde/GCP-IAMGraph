@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .detections import analyze
-from .graph import build_attack_graph
+from .graph import as_dot, build_attack_graph
 from .parser import (
     InputError,
     load_environment,
@@ -34,6 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
             "markdown",
         ),
         default="json",
+        help="Security report output format",
     )
     parser.add_argument(
         "--output",
@@ -41,7 +42,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--graph-output",
-        help=("Write the generated attack graph as JSON to this file"),
+        help=("Write the generated attack graph to this file"),
+    )
+    parser.add_argument(
+        "--graph-format",
+        choices=(
+            "json",
+            "dot",
+        ),
+        default="json",
+        help="Attack-graph output format",
     )
     parser.add_argument(
         "--fail-on",
@@ -78,14 +88,21 @@ def main(
     if args.graph_output:
         graph = build_attack_graph(findings)
 
-        graph_json = json.dumps(
-            graph,
-            indent=2,
-            sort_keys=True,
+        graph_rendered = (
+            as_dot(graph)
+            if args.graph_format == "dot"
+            else (
+                json.dumps(
+                    graph,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
         )
 
         Path(args.graph_output).write_text(
-            graph_json + "\n",
+            graph_rendered,
             encoding="utf-8",
         )
 
