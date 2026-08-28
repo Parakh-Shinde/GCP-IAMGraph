@@ -113,3 +113,36 @@ def test_actas_and_compute_create_reaches_privileged_service_account():
     assert "iam.serviceAccounts.actAs" in finding.attack_path
     assert "compute.instances.create" in finding.attack_path
     assert service_account in finding.attack_path
+
+
+def test_set_iam_policy_can_escalate_to_project_owner():
+    attacker = "user:attacker@example.test"
+
+    project = Resource.from_dict(
+        {
+            "name": "projects/payments-prod",
+            "type": "project",
+            "display_name": "payments-prod",
+            "bindings": [
+                {
+                    "role": ("roles/resourcemanager.projectIamAdmin"),
+                    "members": [attacker],
+                }
+            ],
+        }
+    )
+
+    findings = analyze([project])
+
+    finding = next(item for item in findings if item.rule_id == "GCP-IAM-007")
+
+    assert finding.severity == "critical"
+    assert finding.principal == attacker
+    assert finding.resource == ("projects/payments-prod")
+    assert finding.attack_path == (
+        attacker,
+        "resourcemanager.projects.setIamPolicy",
+        "projects/payments-prod",
+        "grant roles/owner",
+        "Project compromise",
+    )
