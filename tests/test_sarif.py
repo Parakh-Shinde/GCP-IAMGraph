@@ -50,6 +50,11 @@ def test_report_can_be_rendered_as_sarif():
 
     result = run["results"][0]
 
+    physical_location = result["locations"][0]["physicalLocation"]
+
+    assert physical_location["artifactLocation"]["uri"] == "gcp-iamgraph-input.json"
+    assert physical_location["region"]["startLine"] == 1
+
     assert result["ruleId"] == "GCP-IAM-001"
     assert result["level"] == "error"
     assert result["message"]["text"] == ("Broad primitive role: roles/owner")
@@ -90,6 +95,13 @@ def test_cli_writes_sarif_report(
     assert run["tool"]["driver"]["name"] == ("GCP IAMGraph")
     assert run["tool"]["driver"]["rules"]
     assert run["results"]
+
+    first_result = run["results"][0]
+
+    assert (
+        first_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == input_path.as_posix()
+    )
 
     rule_ids = {result["ruleId"] for result in run["results"]}
 

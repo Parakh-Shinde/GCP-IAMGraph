@@ -123,10 +123,7 @@ def main(
             encoding="utf-8",
         )
 
-    report = build_report(
-        findings,
-        len(resources),
-    )
+    report = build_report(findings, len(resources), source_path=args.input)
 
     if args.format == "markdown":
         rendered = as_markdown(report)
