@@ -1,0 +1,533 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cs01/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "GCP IAMGraph",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "GCP-IAM-001",
+              "name": "GCP-IAM-001",
+              "shortDescription": {
+                "text": "Broad primitive role: roles/owner"
+              },
+              "fullDescription": {
+                "text": "A principal has a broad primitive role that exceeds typical least-privilege requirements."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Replace primitive roles with predefined or custom roles containing only required permissions.",
+                "markdown": "**Remediation:** Replace primitive roles with predefined or custom roles containing only required permissions."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": [
+                  "CIS Google Cloud Foundations 1.0"
+                ]
+              }
+            },
+            {
+              "id": "GCP-IAM-002",
+              "name": "GCP-IAM-002",
+              "shortDescription": {
+                "text": "Public or globally authenticated access"
+              },
+              "fullDescription": {
+                "text": "The IAM binding grants access to a public principal."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remove the public member and grant the minimum role to explicitly identified principals.",
+                "markdown": "**Remediation:** Remove the public member and grant the minimum role to explicitly identified principals."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": []
+              }
+            },
+            {
+              "id": "GCP-IAM-003",
+              "name": "GCP-IAM-003",
+              "shortDescription": {
+                "text": "IAM policy modification"
+              },
+              "fullDescription": {
+                "text": "A principal can change project IAM bindings and grant additional access."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+                "markdown": "**Remediation:** Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": []
+              }
+            },
+            {
+              "id": "GCP-IAM-004",
+              "name": "GCP-IAM-004",
+              "shortDescription": {
+                "text": "Service-account key creation"
+              },
+              "fullDescription": {
+                "text": "A principal can create long-lived credentials for a service account."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+                "markdown": "**Remediation:** Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls."
+              },
+              "properties": {
+                "severity": "high",
+                "references": []
+              }
+            },
+            {
+              "id": "GCP-IAM-005",
+              "name": "GCP-IAM-005",
+              "shortDescription": {
+                "text": "Service-account impersonation reaches a privileged role"
+              },
+              "fullDescription": {
+                "text": "The principal can obtain short-lived credentials for a service account with broad access."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
+                "markdown": "**Remediation:** Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": [
+                  "MITRE ATT&CK T1078.004"
+                ]
+              }
+            },
+            {
+              "id": "GCP-IAM-007",
+              "name": "GCP-IAM-007",
+              "shortDescription": {
+                "text": "IAM policy modification can escalate to project Owner"
+              },
+              "fullDescription": {
+                "text": "The principal can modify the project IAM policy and grant itself or another controlled identity the Owner role."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Restrict project IAM policy modification to a controlled administrative identity. Require approval, audit IAM changes, and prevent direct Owner grants.",
+                "markdown": "**Remediation:** Restrict project IAM policy modification to a controlled administrative identity. Require approval, audit IAM changes, and prevent direct Owner grants."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": [
+                  "MITRE ATT&CK T1098"
+                ]
+              }
+            },
+            {
+              "id": "GCP-IAM-008",
+              "name": "GCP-IAM-008",
+              "shortDescription": {
+                "text": "Key creation reaches a privileged service account"
+              },
+              "fullDescription": {
+                "text": "The principal can create a long-lived key for a service account that has a broad primitive role."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "help": {
+                "text": "Remove unnecessary service-account key creation access. Use short-lived credentials, workload identity federation, and organization policies that disable service-account key creation.",
+                "markdown": "**Remediation:** Remove unnecessary service-account key creation access. Use short-lived credentials, workload identity federation, and organization policies that disable service-account key creation."
+              },
+              "properties": {
+                "severity": "critical",
+                "references": [
+                  "MITRE ATT&CK T1098.001"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "GCP-IAM-001",
+          "level": "error",
+          "message": {
+            "text": "Broad primitive role: roles/owner"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+              "roles/owner",
+              "projects/payments-prod",
+              "Broad resource control"
+            ],
+            "evidence": [
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+            ],
+            "remediation": "Replace primitive roles with predefined or custom roles containing only required permissions.",
+            "references": [
+              "CIS Google Cloud Foundations 1.0"
+            ]
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-002",
+          "level": "error",
+          "message": {
+            "text": "Public or globally authenticated access"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "allUsers",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "allUsers",
+              "roles/storage.objectViewer",
+              "projects/payments-prod"
+            ],
+            "evidence": [
+              "allUsers has roles/storage.objectViewer on projects/payments-prod"
+            ],
+            "remediation": "Remove the public member and grant the minimum role to explicitly identified principals.",
+            "references": []
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-003",
+          "level": "error",
+          "message": {
+            "text": "IAM policy modification"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "user:iam-operator@example.test",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "user:iam-operator@example.test",
+              "resourcemanager.projects.setIamPolicy",
+              "projects/payments-prod",
+              "Privilege expansion"
+            ],
+            "evidence": [
+              "user:iam-operator@example.test has roles/resourcemanager.projectIamAdmin on projects/payments-prod"
+            ],
+            "remediation": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+            "references": []
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-005",
+          "level": "error",
+          "message": {
+            "text": "Service-account impersonation reaches a privileged role"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "user:developer@example.test",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "user:developer@example.test",
+              "impersonates",
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+              "roles/owner",
+              "projects/payments-prod"
+            ],
+            "evidence": [
+              "user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+            ],
+            "remediation": "Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
+            "references": [
+              "MITRE ATT&CK T1078.004"
+            ]
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-007",
+          "level": "error",
+          "message": {
+            "text": "IAM policy modification can escalate to project Owner"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "user:iam-operator@example.test",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "user:iam-operator@example.test",
+              "resourcemanager.projects.setIamPolicy",
+              "projects/payments-prod",
+              "grant roles/owner",
+              "Project compromise"
+            ],
+            "evidence": [
+              "user:iam-operator@example.test has roles/resourcemanager.projectIamAdmin on projects/payments-prod"
+            ],
+            "remediation": "Restrict project IAM policy modification to a controlled administrative identity. Require approval, audit IAM changes, and prevent direct Owner grants.",
+            "references": [
+              "MITRE ATT&CK T1098"
+            ]
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-008",
+          "level": "error",
+          "message": {
+            "text": "Key creation reaches a privileged service account"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "principal": "user:contractor@example.test",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "user:contractor@example.test",
+              "iam.serviceAccountKeys.create",
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+              "create long-lived credential",
+              "roles/owner",
+              "projects/payments-prod",
+              "Project compromise"
+            ],
+            "evidence": [
+              "user:contractor@example.test has roles/iam.serviceAccountKeyAdmin on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com inherited from projects/payments-prod",
+              "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+            ],
+            "remediation": "Remove unnecessary service-account key creation access. Use short-lived credentials, workload identity federation, and organization policies that disable service-account key creation.",
+            "references": [
+              "MITRE ATT&CK T1098.001"
+            ]
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-001",
+          "level": "error",
+          "message": {
+            "text": "Broad primitive role: roles/editor"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "folders/engineering",
+                  "fullyQualifiedName": "folders/engineering",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "principal": "group:developers@example.test",
+            "resource": "folders/engineering",
+            "attackPath": [
+              "group:developers@example.test",
+              "roles/editor",
+              "folders/engineering",
+              "Broad resource control"
+            ],
+            "evidence": [
+              "group:developers@example.test has roles/editor on folders/engineering"
+            ],
+            "remediation": "Replace primitive roles with predefined or custom roles containing only required permissions.",
+            "references": [
+              "CIS Google Cloud Foundations 1.0"
+            ]
+          }
+        },
+        {
+          "ruleId": "GCP-IAM-004",
+          "level": "error",
+          "message": {
+            "text": "Service-account key creation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/vulnerable-environment.json",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "projects/payments-prod",
+                  "fullyQualifiedName": "projects/payments-prod",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "principal": "user:contractor@example.test",
+            "resource": "projects/payments-prod",
+            "attackPath": [
+              "user:contractor@example.test",
+              "iam.serviceAccountKeys.create",
+              "projects/payments-prod",
+              "Privilege expansion"
+            ],
+            "evidence": [
+              "user:contractor@example.test has roles/iam.serviceAccountKeyAdmin on projects/payments-prod"
+            ],
+            "remediation": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+            "references": []
+          }
+        }
+      ]
+    }
+  ]
+}

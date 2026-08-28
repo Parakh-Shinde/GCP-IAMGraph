@@ -1,0 +1,12 @@
+{
+  "tool": "GCP IAMGraph",
+  "version": "0.1.0",
+  "generated_at": "2026-08-28T19:34:13.711445+00:00",
+  "source_path": "examples\\hardened-environment.json",
+  "summary": {
+    "resources_analyzed": 2,
+    "total_findings": 0,
+    "by_severity": {}
+  },
+  "findings": []
+}

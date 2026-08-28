@@ -55,6 +55,98 @@ GCP IAMGraph correlates these relationships and produces explainable findings in
 - CI failure thresholds for high and critical findings
 - Automated tests across Python 3.10, 3.11, and 3.12
 
+## Proof it works
+
+GCP IAMGraph includes reproducible vulnerable and hardened environments, automated tests, generated reports, attack graphs, and GitHub Code Scanning integration.
+
+### Verified results
+
+| Verification | Result |
+| --- | --- |
+| Automated test suite | 25 tests passed |
+| Ruff static checks | All checks passed |
+| Vulnerable example | 5 resources analyzed, 8 findings |
+| Hardened example | 2 resources analyzed, 0 findings |
+| GitHub Code Scanning | 8 IAM security alerts uploaded |
+| SARIF | Valid SARIF 2.1.0 output |
+| Attack graph | JSON, DOT, SVG, and PNG |
+
+### Reproduce the results
+
+Vulnerable environment:
+
+```powershell
+gcp-iamgraph examples\vulnerable-environment.json `
+  --format markdown `
+  --output vulnerable-report.md
+```
+
+Expected:
+
+```text
+Resources analyzed: 5
+Findings: 8
+```
+
+Hardened environment:
+
+```powershell
+gcp-iamgraph examples\hardened-environment.json `
+  --format markdown `
+  --output hardened-report.md
+```
+
+Expected:
+
+```text
+Resources analyzed: 2
+Findings: 0
+```
+
+### Generated evidence
+
+- [Vulnerable environment report](docs/demo-output/vulnerable-report.md)
+- [Hardened environment report](docs/demo-output/hardened-report.md)
+- [SARIF 2.1.0 findings](docs/demo-output/iam-findings.sarif)
+- [JSON attack graph](docs/demo-output/attack-graph.json)
+- [Graphviz DOT attack graph](docs/demo-output/attack-graph.dot)
+- [SVG attack graph](docs/evidence/attack-graph.svg)
+
+<details>
+<summary><strong>Automated tests and lint checks</strong></summary>
+
+![Automated tests passed](docs/evidence/01-tests-passed.png)
+
+</details>
+
+<details>
+<summary><strong>Vulnerable versus hardened analysis</strong></summary>
+
+![Vulnerable versus hardened results](docs/evidence/02-vulnerable-vs-hardened.png)
+
+</details>
+
+<details>
+<summary><strong>GitHub Code Scanning integration</strong></summary>
+
+![GitHub Code Scanning alerts](docs/evidence/03-code-scanning-alerts.png)
+
+</details>
+
+<details>
+<summary><strong>Rendered IAM attack graph</strong></summary>
+
+![GCP IAM attack graph](docs/evidence/04-attack-graph.png)
+
+</details>
+
+<details>
+<summary><strong>GitHub Actions validation</strong></summary>
+
+![GitHub Actions checks](docs/evidence/05-github-actions.png)
+
+</details>
+
 ## Architecture
 
 ```mermaid

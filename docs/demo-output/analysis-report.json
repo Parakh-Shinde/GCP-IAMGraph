@@ -1,0 +1,184 @@
+{
+  "tool": "GCP IAMGraph",
+  "version": "0.1.0",
+  "generated_at": "2026-08-28T19:35:54.957424+00:00",
+  "source_path": "examples\\vulnerable-environment.json",
+  "summary": {
+    "resources_analyzed": 5,
+    "total_findings": 8,
+    "by_severity": {
+      "critical": 6,
+      "high": 2
+    }
+  },
+  "findings": [
+    {
+      "rule_id": "GCP-IAM-001",
+      "title": "Broad primitive role: roles/owner",
+      "severity": "critical",
+      "principal": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "resource": "projects/payments-prod",
+      "description": "A principal has a broad primitive role that exceeds typical least-privilege requirements.",
+      "attack_path": [
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+        "roles/owner",
+        "projects/payments-prod",
+        "Broad resource control"
+      ],
+      "evidence": [
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+      ],
+      "remediation": "Replace primitive roles with predefined or custom roles containing only required permissions.",
+      "references": [
+        "CIS Google Cloud Foundations 1.0"
+      ]
+    },
+    {
+      "rule_id": "GCP-IAM-002",
+      "title": "Public or globally authenticated access",
+      "severity": "critical",
+      "principal": "allUsers",
+      "resource": "projects/payments-prod",
+      "description": "The IAM binding grants access to a public principal.",
+      "attack_path": [
+        "allUsers",
+        "roles/storage.objectViewer",
+        "projects/payments-prod"
+      ],
+      "evidence": [
+        "allUsers has roles/storage.objectViewer on projects/payments-prod"
+      ],
+      "remediation": "Remove the public member and grant the minimum role to explicitly identified principals.",
+      "references": []
+    },
+    {
+      "rule_id": "GCP-IAM-003",
+      "title": "IAM policy modification",
+      "severity": "critical",
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "description": "A principal can change project IAM bindings and grant additional access.",
+      "attack_path": [
+        "user:iam-operator@example.test",
+        "resourcemanager.projects.setIamPolicy",
+        "projects/payments-prod",
+        "Privilege expansion"
+      ],
+      "evidence": [
+        "user:iam-operator@example.test has roles/resourcemanager.projectIamAdmin on projects/payments-prod"
+      ],
+      "remediation": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+      "references": []
+    },
+    {
+      "rule_id": "GCP-IAM-005",
+      "title": "Service-account impersonation reaches a privileged role",
+      "severity": "critical",
+      "principal": "user:developer@example.test",
+      "resource": "projects/payments-prod",
+      "description": "The principal can obtain short-lived credentials for a service account with broad access.",
+      "attack_path": [
+        "user:developer@example.test",
+        "impersonates",
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+        "roles/owner",
+        "projects/payments-prod"
+      ],
+      "evidence": [
+        "user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+      ],
+      "remediation": "Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
+      "references": [
+        "MITRE ATT&CK T1078.004"
+      ]
+    },
+    {
+      "rule_id": "GCP-IAM-007",
+      "title": "IAM policy modification can escalate to project Owner",
+      "severity": "critical",
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "description": "The principal can modify the project IAM policy and grant itself or another controlled identity the Owner role.",
+      "attack_path": [
+        "user:iam-operator@example.test",
+        "resourcemanager.projects.setIamPolicy",
+        "projects/payments-prod",
+        "grant roles/owner",
+        "Project compromise"
+      ],
+      "evidence": [
+        "user:iam-operator@example.test has roles/resourcemanager.projectIamAdmin on projects/payments-prod"
+      ],
+      "remediation": "Restrict project IAM policy modification to a controlled administrative identity. Require approval, audit IAM changes, and prevent direct Owner grants.",
+      "references": [
+        "MITRE ATT&CK T1098"
+      ]
+    },
+    {
+      "rule_id": "GCP-IAM-008",
+      "title": "Key creation reaches a privileged service account",
+      "severity": "critical",
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "description": "The principal can create a long-lived key for a service account that has a broad primitive role.",
+      "attack_path": [
+        "user:contractor@example.test",
+        "iam.serviceAccountKeys.create",
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+        "create long-lived credential",
+        "roles/owner",
+        "projects/payments-prod",
+        "Project compromise"
+      ],
+      "evidence": [
+        "user:contractor@example.test has roles/iam.serviceAccountKeyAdmin on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com inherited from projects/payments-prod",
+        "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
+      ],
+      "remediation": "Remove unnecessary service-account key creation access. Use short-lived credentials, workload identity federation, and organization policies that disable service-account key creation.",
+      "references": [
+        "MITRE ATT&CK T1098.001"
+      ]
+    },
+    {
+      "rule_id": "GCP-IAM-001",
+      "title": "Broad primitive role: roles/editor",
+      "severity": "high",
+      "principal": "group:developers@example.test",
+      "resource": "folders/engineering",
+      "description": "A principal has a broad primitive role that exceeds typical least-privilege requirements.",
+      "attack_path": [
+        "group:developers@example.test",
+        "roles/editor",
+        "folders/engineering",
+        "Broad resource control"
+      ],
+      "evidence": [
+        "group:developers@example.test has roles/editor on folders/engineering"
+      ],
+      "remediation": "Replace primitive roles with predefined or custom roles containing only required permissions.",
+      "references": [
+        "CIS Google Cloud Foundations 1.0"
+      ]
+    },
+    {
+      "rule_id": "GCP-IAM-004",
+      "title": "Service-account key creation",
+      "severity": "high",
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "description": "A principal can create long-lived credentials for a service account.",
+      "attack_path": [
+        "user:contractor@example.test",
+        "iam.serviceAccountKeys.create",
+        "projects/payments-prod",
+        "Privilege expansion"
+      ],
+      "evidence": [
+        "user:contractor@example.test has roles/iam.serviceAccountKeyAdmin on projects/payments-prod"
+      ],
+      "remediation": "Restrict this permission to a controlled deployment identity and require short-lived credentials and approval controls.",
+      "references": []
+    }
+  ]
+}
