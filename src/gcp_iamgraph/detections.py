@@ -5,11 +5,7 @@ from collections.abc import Iterable
 
 from .access import AccessIndex, Grant
 from .hierarchy import Hierarchy
-from .models import (
-    Finding,
-    Resource,
-    RoleDefinition,
-)
+from .models import Finding, Resource, RoleDefinition
 from .roles import RoleCatalog
 
 PUBLIC_PRINCIPALS = {
@@ -28,7 +24,7 @@ def _finding_for_privileged_grant(
 ) -> Finding:
     return Finding(
         rule_id="GCP-IAM-001",
-        title=(f"Broad primitive role: {grant.role}"),
+        title=f"Broad primitive role: {grant.role}",
         severity=PRIVILEGED_ROLES[grant.role],
         principal=grant.principal,
         resource=grant.target.name,
@@ -60,9 +56,8 @@ def _direct_findings(
     seen: set[tuple[str, str, str]] = set()
 
     for resource in index.hierarchy.resources.values():
-        # Findings are reported where the binding is
-        # configured. Inherited impact is preserved by
-        # the attack-path analysis.
+        # Direct findings are reported where the IAM
+        # binding is configured.
         for binding in resource.bindings:
             for principal in binding.members:
                 grant = Grant(
@@ -88,13 +83,13 @@ def _direct_findings(
                     findings.append(_finding_for_privileged_grant(grant))
 
                 if grant.principal in PUBLIC_PRINCIPALS:
+                    severity = "critical" if grant.principal == "allUsers" else "high"
+
                     findings.append(
                         Finding(
                             rule_id="GCP-IAM-002",
                             title=("Public or globally authenticated access"),
-                            severity=(
-                                "critical" if grant.principal == "allUsers" else "high"
-                            ),
+                            severity=severity,
                             principal=grant.principal,
                             resource=grant.target.name,
                             description=(
@@ -107,24 +102,22 @@ def _direct_findings(
                             ),
                             evidence=(grant.evidence(),),
                             remediation=(
-                                "Remove the public "
-                                "member and grant the "
-                                "minimum role to "
-                                "explicitly identified "
+                                "Remove the public member "
+                                "and grant the minimum role "
+                                "to explicitly identified "
                                 "principals."
                             ),
                         )
                     )
 
-                # Owner already explains unrestricted
-                # privilege at this scope. Narrower
-                # findings would be redundant.
+                # Owner already describes unrestricted
+                # privilege at this scope.
                 if grant.role == "roles/owner":
                     continue
 
                 permission_rules = (
                     (
-                        ("resourcemanager.projects.setIamPolicy"),
+                        "resourcemanager.projects.setIamPolicy",
                         "GCP-IAM-003",
                         "IAM policy modification",
                         "critical",
@@ -135,14 +128,14 @@ def _direct_findings(
                         ),
                     ),
                     (
-                        ("iam.serviceAccountKeys.create"),
+                        "iam.serviceAccountKeys.create",
                         "GCP-IAM-004",
-                        ("Service-account key creation"),
+                        "Service-account key creation",
                         "high",
                         (
                             "A principal can create "
-                            "long-lived credentials "
-                            "for a service account."
+                            "long-lived credentials for "
+                            "a service account."
                         ),
                     ),
                 )
@@ -154,11 +147,9 @@ def _direct_findings(
                     severity,
                     description,
                 ) in permission_rules:
-                    if not (
-                        index.catalog.has_permission(
-                            grant.role,
-                            permission,
-                        )
+                    if not index.catalog.has_permission(
+                        grant.role,
+                        permission,
                     ):
                         continue
 
@@ -189,9 +180,8 @@ def _direct_findings(
                             ),
                             evidence=(grant.evidence(),),
                             remediation=(
-                                "Restrict this "
-                                "permission to a "
-                                "controlled deployment "
+                                "Restrict this permission "
+                                "to a controlled deployment "
                                 "identity and require "
                                 "short-lived credentials "
                                 "and approval controls."
@@ -219,7 +209,7 @@ def _impersonation_edges(
         for grant in index.grants_on(resource.name):
             if index.catalog.has_permission(
                 grant.role,
-                ("iam.serviceAccounts.getAccessToken"),
+                "iam.serviceAccounts.getAccessToken",
             ):
                 edges[grant.principal].append(
                     (
@@ -277,11 +267,7 @@ def _impersonation_findings(
         visited = {start}
 
         while queue:
-            (
-                current,
-                path,
-                evidence,
-            ) = queue.popleft()
+            current, path, evidence = queue.popleft()
 
             if current != start and current in privileged:
                 for target_grant in privileged[current]:
@@ -295,13 +281,12 @@ def _impersonation_findings(
                             ),
                             severity="critical",
                             principal=start,
-                            resource=(target_grant.target.name),
+                            resource=target_grant.target.name,
                             description=(
-                                "The principal can "
-                                "obtain short-lived "
-                                "credentials for a "
-                                "service account with "
-                                "broad access."
+                                "The principal can obtain "
+                                "short-lived credentials "
+                                "for a service account "
+                                "with broad access."
                             ),
                             attack_path=(
                                 *path,
@@ -313,11 +298,11 @@ def _impersonation_findings(
                                 target_grant.evidence(),
                             ),
                             remediation=(
-                                "Remove unnecessary "
-                                "Token Creator bindings "
-                                "and grant impersonation "
-                                "only on narrowly scoped "
-                                "service accounts."
+                                "Remove unnecessary Token "
+                                "Creator bindings and grant "
+                                "impersonation only on "
+                                "narrowly scoped service "
+                                "accounts."
                             ),
                             references=("MITRE ATT&CK T1078.004",),
                         )
@@ -325,14 +310,12 @@ def _impersonation_findings(
 
                 continue
 
-            for (
-                target,
-                grant,
-            ) in edges.get(current, []):
+            for target, grant in edges.get(current, []):
                 if target in visited:
                     continue
 
                 visited.add(target)
+
                 queue.append(
                     (
                         target,
@@ -351,6 +334,108 @@ def _impersonation_findings(
     return findings
 
 
+def _actas_compute_findings(
+    index: AccessIndex,
+) -> list[Finding]:
+    """Detect VM creation using a privileged service account."""
+
+    findings: list[Finding] = []
+    privileged = _privileged_targets(index)
+    seen: set[tuple[str, str, str]] = set()
+
+    for resource in index.hierarchy.resources.values():
+        if resource.resource_type != "service_account":
+            continue
+
+        service_account_principal = f"serviceAccount:{resource.display_name}"
+
+        privileged_grants = privileged.get(
+            service_account_principal,
+            [],
+        )
+
+        if not privileged_grants:
+            continue
+
+        actas_grants = [
+            grant
+            for grant in index.grants_on(resource.name)
+            if (
+                grant.principal != service_account_principal
+                and index.catalog.has_permission(
+                    grant.role,
+                    "iam.serviceAccounts.actAs",
+                )
+            )
+        ]
+
+        for actas_grant in actas_grants:
+            for privileged_grant in privileged_grants:
+                compute_grants = index.has_permission(
+                    actas_grant.principal,
+                    privileged_grant.target.name,
+                    "compute.instances.create",
+                )
+
+                for compute_grant in compute_grants:
+                    dedupe = (
+                        actas_grant.principal,
+                        resource.name,
+                        privileged_grant.target.name,
+                    )
+
+                    if dedupe in seen:
+                        continue
+
+                    seen.add(dedupe)
+
+                    findings.append(
+                        Finding(
+                            rule_id="GCP-IAM-006",
+                            title=("VM creation can use a privileged service account"),
+                            severity="critical",
+                            principal=actas_grant.principal,
+                            resource=(privileged_grant.target.name),
+                            description=(
+                                "The principal can create "
+                                "a Compute Engine instance "
+                                "and attach a privileged "
+                                "service account, allowing "
+                                "access to the service "
+                                "account's permissions."
+                            ),
+                            attack_path=(
+                                actas_grant.principal,
+                                "compute.instances.create",
+                                compute_grant.target.name,
+                                "iam.serviceAccounts.actAs",
+                                service_account_principal,
+                                privileged_grant.role,
+                                privileged_grant.target.name,
+                            ),
+                            evidence=(
+                                compute_grant.evidence(),
+                                actas_grant.evidence(),
+                                privileged_grant.evidence(),
+                            ),
+                            remediation=(
+                                "Do not grant both Compute "
+                                "instance creation and "
+                                "service-account actAs to "
+                                "the same principal. "
+                                "Restrict actAs to "
+                                "non-privileged service "
+                                "accounts and enforce "
+                                "approved service accounts "
+                                "for VM deployments."
+                            ),
+                            references=("MITRE ATT&CK T1548",),
+                        )
+                    )
+
+    return findings
+
+
 def analyze(
     resources: list[Resource],
     role_definitions: Iterable[RoleDefinition] = (),
@@ -365,6 +450,7 @@ def analyze(
     findings = [
         *_direct_findings(index),
         *_impersonation_findings(index),
+        *_actas_compute_findings(index),
     ]
 
     severity_rank = {
