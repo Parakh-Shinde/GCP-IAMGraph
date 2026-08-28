@@ -1,0 +1,326 @@
+{
+  "edges": [
+    {
+      "principal": "group:developers@example.test",
+      "resource": "folders/engineering",
+      "rule_id": "GCP-IAM-001",
+      "severity": "high",
+      "source": "folders/engineering",
+      "target": "Broad resource control"
+    },
+    {
+      "principal": "group:developers@example.test",
+      "resource": "folders/engineering",
+      "rule_id": "GCP-IAM-001",
+      "severity": "high",
+      "source": "group:developers@example.test",
+      "target": "roles/editor"
+    },
+    {
+      "principal": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-001",
+      "severity": "critical",
+      "source": "projects/payments-prod",
+      "target": "Broad resource control"
+    },
+    {
+      "principal": "group:developers@example.test",
+      "resource": "folders/engineering",
+      "rule_id": "GCP-IAM-001",
+      "severity": "high",
+      "source": "roles/editor",
+      "target": "folders/engineering"
+    },
+    {
+      "principal": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-001",
+      "severity": "critical",
+      "source": "roles/owner",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-001",
+      "severity": "critical",
+      "source": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "target": "roles/owner"
+    },
+    {
+      "principal": "allUsers",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-002",
+      "severity": "critical",
+      "source": "allUsers",
+      "target": "roles/storage.objectViewer"
+    },
+    {
+      "principal": "allUsers",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-002",
+      "severity": "critical",
+      "source": "roles/storage.objectViewer",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-003",
+      "severity": "critical",
+      "source": "projects/payments-prod",
+      "target": "Privilege expansion"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-003",
+      "severity": "critical",
+      "source": "resourcemanager.projects.setIamPolicy",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-003",
+      "severity": "critical",
+      "source": "user:iam-operator@example.test",
+      "target": "resourcemanager.projects.setIamPolicy"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-004",
+      "severity": "high",
+      "source": "iam.serviceAccountKeys.create",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-004",
+      "severity": "high",
+      "source": "projects/payments-prod",
+      "target": "Privilege expansion"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-004",
+      "severity": "high",
+      "source": "user:contractor@example.test",
+      "target": "iam.serviceAccountKeys.create"
+    },
+    {
+      "principal": "user:developer@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-005",
+      "severity": "critical",
+      "source": "impersonates",
+      "target": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com"
+    },
+    {
+      "principal": "user:developer@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-005",
+      "severity": "critical",
+      "source": "roles/owner",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:developer@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-005",
+      "severity": "critical",
+      "source": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "target": "roles/owner"
+    },
+    {
+      "principal": "user:developer@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-005",
+      "severity": "critical",
+      "source": "user:developer@example.test",
+      "target": "impersonates"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-007",
+      "severity": "critical",
+      "source": "grant roles/owner",
+      "target": "Project compromise"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-007",
+      "severity": "critical",
+      "source": "projects/payments-prod",
+      "target": "grant roles/owner"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-007",
+      "severity": "critical",
+      "source": "resourcemanager.projects.setIamPolicy",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:iam-operator@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-007",
+      "severity": "critical",
+      "source": "user:iam-operator@example.test",
+      "target": "resourcemanager.projects.setIamPolicy"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "create long-lived credential",
+      "target": "roles/owner"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "iam.serviceAccountKeys.create",
+      "target": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "projects/payments-prod",
+      "target": "Project compromise"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "roles/owner",
+      "target": "projects/payments-prod"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "target": "create long-lived credential"
+    },
+    {
+      "principal": "user:contractor@example.test",
+      "resource": "projects/payments-prod",
+      "rule_id": "GCP-IAM-008",
+      "severity": "critical",
+      "source": "user:contractor@example.test",
+      "target": "iam.serviceAccountKeys.create"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Broad resource control",
+      "kind": "action",
+      "label": "Broad resource control"
+    },
+    {
+      "id": "Privilege expansion",
+      "kind": "action",
+      "label": "Privilege expansion"
+    },
+    {
+      "id": "Project compromise",
+      "kind": "action",
+      "label": "Project compromise"
+    },
+    {
+      "id": "allUsers",
+      "kind": "principal",
+      "label": "allUsers"
+    },
+    {
+      "id": "create long-lived credential",
+      "kind": "action",
+      "label": "create long-lived credential"
+    },
+    {
+      "id": "folders/engineering",
+      "kind": "resource",
+      "label": "folders/engineering"
+    },
+    {
+      "id": "grant roles/owner",
+      "kind": "action",
+      "label": "grant roles/owner"
+    },
+    {
+      "id": "group:developers@example.test",
+      "kind": "principal",
+      "label": "group:developers@example.test"
+    },
+    {
+      "id": "iam.serviceAccountKeys.create",
+      "kind": "permission",
+      "label": "iam.serviceAccountKeys.create"
+    },
+    {
+      "id": "impersonates",
+      "kind": "action",
+      "label": "impersonates"
+    },
+    {
+      "id": "projects/payments-prod",
+      "kind": "resource",
+      "label": "projects/payments-prod"
+    },
+    {
+      "id": "resourcemanager.projects.setIamPolicy",
+      "kind": "permission",
+      "label": "resourcemanager.projects.setIamPolicy"
+    },
+    {
+      "id": "roles/editor",
+      "kind": "role",
+      "label": "roles/editor"
+    },
+    {
+      "id": "roles/owner",
+      "kind": "role",
+      "label": "roles/owner"
+    },
+    {
+      "id": "roles/storage.objectViewer",
+      "kind": "role",
+      "label": "roles/storage.objectViewer"
+    },
+    {
+      "id": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com",
+      "kind": "principal",
+      "label": "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com"
+    },
+    {
+      "id": "user:contractor@example.test",
+      "kind": "principal",
+      "label": "user:contractor@example.test"
+    },
+    {
+      "id": "user:developer@example.test",
+      "kind": "principal",
+      "label": "user:developer@example.test"
+    },
+    {
+      "id": "user:iam-operator@example.test",
+      "kind": "principal",
+      "label": "user:iam-operator@example.test"
+    }
+  ],
+  "version": "1.0"
+}
