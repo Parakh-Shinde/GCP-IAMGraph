@@ -9,6 +9,7 @@ from .detections import analyze
 from .graph import as_dot, build_attack_graph
 from .parser import (
     InputError,
+    load_cloud_asset_inventory,
     load_environment,
     load_role_definitions,
 )
@@ -25,7 +26,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "input",
-        help=("Path to a GCP IAMGraph JSON environment"),
+        help="Path to GCP IAM input data",
+    )
+    parser.add_argument(
+        "--input-format",
+        choices=(
+            "iamgraph",
+            "cai",
+        ),
+        default="iamgraph",
+        help=("Input format: IAMGraph JSON or Cloud Asset Inventory JSONL"),
     )
     parser.add_argument(
         "--format",
@@ -72,8 +82,13 @@ def main(
     args = build_parser().parse_args(argv)
 
     try:
-        resources = load_environment(args.input)
-        role_definitions = load_role_definitions(args.input)
+        if args.input_format == "cai":
+            resources = load_cloud_asset_inventory(args.input)
+            role_definitions = []
+        else:
+            resources = load_environment(args.input)
+            role_definitions = load_role_definitions(args.input)
+
         findings = analyze(
             resources,
             role_definitions,

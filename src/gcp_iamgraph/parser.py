@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .models import Resource, RoleDefinition
+from .models import (
+    Binding,
+    Resource,
+    RoleDefinition,
+)
 
 
 class InputError(ValueError):
@@ -18,7 +22,10 @@ def _load_document(
 
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (
+        OSError,
+        json.JSONDecodeError,
+    ) as exc:
         raise InputError(f"Unable to read GCP IAM data: {exc}") from exc
 
     if not isinstance(data, dict):
@@ -48,6 +55,7 @@ def load_environment(
         raise InputError(f"Invalid resource or binding structure: {exc}") from exc
 
     _validate_resources(result)
+
     return result
 
 
@@ -73,6 +81,228 @@ def load_role_definitions(
         AttributeError,
     ) as exc:
         raise InputError(f"Invalid role definition: {exc}") from exc
+
+
+def _relative_asset_name(
+    full_name: str,
+) -> str:
+    """Convert a full CAI asset name to a relative name."""
+
+    if not full_name.startswith("//"):
+        return full_name
+
+    without_prefix = full_name[2:]
+    separator = without_prefix.find("/")
+
+    if separator == -1:
+        raise InputError(f"Invalid Cloud Asset name: {full_name}")
+
+    return without_prefix[separator + 1 :]
+
+
+def _resource_type_from_name(
+    name: str,
+) -> str:
+    """Infer an IAMGraph resource type from its name."""
+
+    if name.startswith("organizations/"):
+        return "organization"
+
+    if name.startswith("folders/"):
+        return "folder"
+
+    if "/serviceAccounts/" in name:
+        return "service_account"
+
+    if name.startswith("projects/"):
+        return "project"
+
+    return "resource"
+
+
+def _resource_type_from_asset(
+    asset_type: str,
+    name: str,
+) -> str:
+    """Map a CAI asset type to an IAMGraph type."""
+
+    suffix = asset_type.rsplit(
+        "/",
+        maxsplit=1,
+    )[-1]
+
+    known_types = {
+        "Organization": "organization",
+        "Folder": "folder",
+        "Project": "project",
+        "ServiceAccount": "service_account",
+    }
+
+    return known_types.get(
+        suffix,
+        _resource_type_from_name(name),
+    )
+
+
+def _display_name(
+    name: str,
+) -> str:
+    """Return a human-readable resource name."""
+
+    return name.rsplit(
+        "/",
+        maxsplit=1,
+    )[-1]
+
+
+def _load_json_lines(
+    path: str | Path,
+) -> list[dict[str, Any]]:
+    """Read a Cloud Asset Inventory JSONL export."""
+
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise InputError(f"Unable to read Cloud Asset Inventory data: {exc}") from exc
+
+    assets: list[dict[str, Any]] = []
+
+    for line_number, line in enumerate(
+        lines,
+        start=1,
+    ):
+        if not line.strip():
+            continue
+
+        try:
+            asset = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise InputError(
+                f"Invalid Cloud Asset Inventory JSON on line {line_number}: {exc}"
+            ) from exc
+
+        if not isinstance(asset, dict):
+            raise InputError(
+                f"Cloud Asset Inventory entry on line {line_number} must be an object"
+            )
+
+        assets.append(asset)
+
+    if not assets:
+        raise InputError("Cloud Asset Inventory export is empty")
+
+    return assets
+
+
+def load_cloud_asset_inventory(
+    path: str | Path,
+) -> list[Resource]:
+    """Load a Cloud Asset Inventory IAM-policy export."""
+
+    assets = _load_json_lines(path)
+    resources: dict[str, Resource] = {}
+
+    for asset in assets:
+        try:
+            full_name = asset["name"]
+            asset_type = asset["assetType"]
+        except KeyError as exc:
+            raise InputError(
+                f"Cloud Asset Inventory asset is missing a required field: {exc}"
+            ) from exc
+
+        if not isinstance(full_name, str):
+            raise InputError("Cloud Asset Inventory asset name must be a string")
+
+        if not isinstance(asset_type, str):
+            raise InputError("Cloud Asset Inventory assetType must be a string")
+
+        ancestors = asset.get(
+            "ancestors",
+            [],
+        )
+
+        if not isinstance(ancestors, list):
+            raise InputError("Cloud Asset Inventory ancestors must be an array")
+
+        if not all(isinstance(item, str) for item in ancestors):
+            raise InputError("Cloud Asset Inventory ancestors must contain strings")
+
+        # CAI orders ancestors from the closest
+        # resource to the organization root.
+        for position, ancestor in enumerate(ancestors):
+            parent = ancestors[position + 1] if position + 1 < len(ancestors) else None
+
+            existing = resources.get(ancestor)
+
+            resources[ancestor] = Resource(
+                name=ancestor,
+                resource_type=(_resource_type_from_name(ancestor)),
+                display_name=_display_name(ancestor),
+                parent=parent,
+                bindings=(existing.bindings if existing is not None else ()),
+            )
+
+        name = _relative_asset_name(full_name)
+
+        parent = None
+
+        if ancestors:
+            if name == ancestors[0]:
+                parent = ancestors[1] if len(ancestors) > 1 else None
+            else:
+                parent = ancestors[0]
+
+        iam_policy = asset.get(
+            "iamPolicy",
+            {},
+        )
+
+        if not isinstance(iam_policy, dict):
+            raise InputError("Cloud Asset Inventory iamPolicy must be an object")
+
+        raw_bindings = iam_policy.get(
+            "bindings",
+            [],
+        )
+
+        if not isinstance(raw_bindings, list):
+            raise InputError("Cloud Asset Inventory IAM bindings must be an array")
+
+        try:
+            bindings = tuple(Binding.from_dict(item) for item in raw_bindings)
+        except (
+            KeyError,
+            TypeError,
+            AttributeError,
+        ) as exc:
+            raise InputError(
+                f"Invalid Cloud Asset Inventory IAM binding: {exc}"
+            ) from exc
+
+        existing = resources.get(name)
+        existing_bindings = existing.bindings if existing is not None else ()
+
+        resources[name] = Resource(
+            name=name,
+            resource_type=(
+                _resource_type_from_asset(
+                    asset_type,
+                    name,
+                )
+            ),
+            display_name=_display_name(name),
+            parent=parent,
+            bindings=(
+                *existing_bindings,
+                *bindings,
+            ),
+        )
+
+    result = list(resources.values())
+    _validate_resources(result)
+
+    return result
 
 
 def _validate_resources(
