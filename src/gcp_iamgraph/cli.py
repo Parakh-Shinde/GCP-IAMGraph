@@ -16,6 +16,7 @@ from .parser import (
 from .reporting import (
     as_json,
     as_markdown,
+    as_sarif,
     build_report,
 )
 
@@ -42,6 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=(
             "json",
             "markdown",
+            "sarif",
         ),
         default="json",
         help="Security report output format",
@@ -126,7 +128,12 @@ def main(
         len(resources),
     )
 
-    rendered = as_markdown(report) if args.format == "markdown" else as_json(report)
+    if args.format == "markdown":
+        rendered = as_markdown(report)
+    elif args.format == "sarif":
+        rendered = as_sarif(report)
+    else:
+        rendered = as_json(report)
 
     if args.output:
         Path(args.output).write_text(
