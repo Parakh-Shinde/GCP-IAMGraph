@@ -6,6 +6,7 @@ from typing import Any
 
 from .models import (
     Binding,
+    DenyPolicy,
     Resource,
     RoleDefinition,
 )
@@ -21,7 +22,11 @@ def _load_document(
     """Read and validate a GCP IAMGraph JSON document."""
 
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(
+            Path(path).read_text(
+                encoding="utf-8",
+            )
+        )
     except (
         OSError,
         json.JSONDecodeError,
@@ -81,6 +86,54 @@ def load_role_definitions(
         AttributeError,
     ) as exc:
         raise InputError(f"Invalid role definition: {exc}") from exc
+
+
+def load_deny_policies(
+    path: str | Path,
+) -> list[DenyPolicy]:
+    """Load and validate deny policies from IAMGraph JSON."""
+
+    data = _load_document(path)
+    raw_policies = data.get(
+        "deny_policies",
+        [],
+    )
+
+    if not isinstance(raw_policies, list):
+        raise InputError("'deny_policies' must be an array")
+
+    raw_resources = data.get("resources")
+
+    if not isinstance(raw_resources, list):
+        raise InputError("Input must contain a 'resources' array")
+
+    try:
+        resources = [Resource.from_dict(item) for item in raw_resources]
+    except (
+        KeyError,
+        TypeError,
+        AttributeError,
+    ) as exc:
+        raise InputError(f"Invalid resource or binding structure: {exc}") from exc
+
+    _validate_resources(resources)
+
+    try:
+        policies = [DenyPolicy.from_dict(item) for item in raw_policies]
+    except (
+        KeyError,
+        TypeError,
+        AttributeError,
+        ValueError,
+    ) as exc:
+        raise InputError(f"Invalid deny policy: {exc}") from exc
+
+    _validate_deny_policies(
+        policies,
+        resources,
+    )
+
+    return policies
 
 
 def _relative_asset_name(
@@ -161,7 +214,13 @@ def _load_json_lines(
     """Read a Cloud Asset Inventory JSONL export."""
 
     try:
-        lines = Path(path).read_text(encoding="utf-8").splitlines()
+        lines = (
+            Path(path)
+            .read_text(
+                encoding="utf-8",
+            )
+            .splitlines()
+        )
     except OSError as exc:
         raise InputError(f"Unable to read Cloud Asset Inventory data: {exc}") from exc
 
@@ -244,7 +303,6 @@ def load_cloud_asset_inventory(
             )
 
         name = _relative_asset_name(full_name)
-
         parent = None
 
         if ancestors:
@@ -323,3 +381,23 @@ def _validate_resources(
 
         if resource.parent == resource.name:
             raise InputError(f"Resource '{resource.name}' cannot be its own parent")
+
+
+def _validate_deny_policies(
+    policies: list[DenyPolicy],
+    resources: list[Resource],
+) -> None:
+    """Validate deny-policy names and attachment points."""
+
+    policy_names = {policy.name for policy in policies}
+
+    if len(policy_names) != len(policies):
+        raise InputError("Deny policy names must be unique")
+
+    resource_names = {resource.name for resource in resources}
+
+    for policy in policies:
+        if policy.parent not in resource_names:
+            raise InputError(
+                f"Unknown deny policy parent '{policy.parent}' for '{policy.name}'"
+            )
