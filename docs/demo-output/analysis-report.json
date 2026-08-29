@@ -1,7 +1,7 @@
 {
   "tool": "GCP IAMGraph",
-  "version": "0.1.0",
-  "generated_at": "2026-08-28T19:35:54.957424+00:00",
+  "version": "0.1.1",
+  "generated_at": "2026-08-29T12:45:37.630982+00:00",
   "source_path": "examples\\vulnerable-environment.json",
   "summary": {
     "resources_analyzed": 5,

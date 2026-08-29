@@ -63,7 +63,8 @@ GCP IAMGraph includes reproducible vulnerable and hardened environments, automat
 
 | Verification | Result |
 | --- | --- |
-| Automated test suite | 25 tests passed |
+| Automated test suite | 27 tests passed |
+| Test coverage | 87.96% with an 85% minimum CI gate |
 | Ruff static checks | All checks passed |
 | Vulnerable example | 5 resources analyzed, 8 findings |
 | Hardened example | 2 resources analyzed, 0 findings |
@@ -149,6 +150,13 @@ Findings: 0
 <summary><strong>GitHub Actions validation</strong></summary>
 
 ![GitHub Actions checks](docs/evidence/05-github-actions.png)
+
+</details>
+
+<details>
+<summary><strong>v0.1.1 package and release validation</strong></summary>
+
+![v0.1.1 package validation](docs/evidence/06-release-validation.png)
 
 </details>
 
