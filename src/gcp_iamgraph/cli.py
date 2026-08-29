@@ -21,9 +21,25 @@ from .reporting import (
 )
 
 
+def _write_output(
+    path: str,
+    content: str,
+    output_type: str,
+) -> None:
+    """Write CLI output and convert filesystem failures into clean errors."""
+
+    try:
+        Path(path).write_text(
+            content,
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise InputError(f"Unable to write {output_type} file '{path}': {exc}") from exc
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=("Analyze GCP IAM data for dangerous access and attack paths")
+        description="Analyze GCP IAM data for dangerous access and attack paths"
     )
     parser.add_argument(
         "input",
@@ -36,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cai",
         ),
         default="iamgraph",
-        help=("Input format: IAMGraph JSON or Cloud Asset Inventory JSONL"),
+        help="Input format: IAMGraph JSON or Cloud Asset Inventory JSONL",
     )
     parser.add_argument(
         "--format",
@@ -54,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--graph-output",
-        help=("Write the generated attack graph to this file"),
+        help="Write the generated attack graph to this file",
     )
     parser.add_argument(
         "--graph-format",
@@ -105,10 +121,10 @@ def main(
     if args.graph_output:
         graph = build_attack_graph(findings)
 
-        graph_rendered = (
-            as_dot(graph)
-            if args.graph_format == "dot"
-            else (
+        if args.graph_format == "dot":
+            graph_rendered = as_dot(graph)
+        else:
+            graph_rendered = (
                 json.dumps(
                     graph,
                     indent=2,
@@ -116,14 +132,25 @@ def main(
                 )
                 + "\n"
             )
-        )
 
-        Path(args.graph_output).write_text(
-            graph_rendered,
-            encoding="utf-8",
-        )
+        try:
+            _write_output(
+                args.graph_output,
+                graph_rendered,
+                "attack graph",
+            )
+        except InputError as exc:
+            print(
+                f"error: {exc}",
+                file=sys.stderr,
+            )
+            return 2
 
-    report = build_report(findings, len(resources), source_path=args.input)
+    report = build_report(
+        findings,
+        len(resources),
+        source_path=args.input,
+    )
 
     if args.format == "markdown":
         rendered = as_markdown(report)
@@ -133,10 +160,18 @@ def main(
         rendered = as_json(report)
 
     if args.output:
-        Path(args.output).write_text(
-            rendered + "\n",
-            encoding="utf-8",
-        )
+        try:
+            _write_output(
+                args.output,
+                rendered + "\n",
+                "security report",
+            )
+        except InputError as exc:
+            print(
+                f"error: {exc}",
+                file=sys.stderr,
+            )
+            return 2
     else:
         print(rendered)
 

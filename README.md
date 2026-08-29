@@ -102,6 +102,11 @@ Expected:
 Resources analyzed: 2
 Findings: 0
 ```
+> [!IMPORTANT]
+> The GitHub Code Scanning alerts shown in this repository are intentionally
+> generated from the fictional `examples/vulnerable-environment.json` IAM
+> configuration. They demonstrate GCP IAMGraph's detection capabilities and
+> do not represent vulnerabilities in the analyzer's Python source code.
 
 ### Generated evidence
 
