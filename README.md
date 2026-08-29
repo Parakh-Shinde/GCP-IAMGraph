@@ -174,6 +174,10 @@ flowchart TD
     G --> I["GitHub Code Scanning"]
 ```
 
+## Design documents
+
+- [Authorization engine design for v0.2.0](docs/design/authorization-engine.md)
+
 ## Detection catalog
 
 | Rule | Detection | Severity |
