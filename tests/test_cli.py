@@ -28,7 +28,7 @@ def test_cli_analyzes_custom_role(
                     {
                         "name": ("projects/test/roles/dangerousOperator"),
                         "title": "Dangerous Operator",
-                        "permissions": [("resourcemanager.projects.setIamPolicy")],
+                        "permissions": ["resourcemanager.projects.setIamPolicy"],
                     }
                 ],
             }
@@ -47,3 +47,63 @@ def test_cli_analyzes_custom_role(
         "GCP-IAM-003",
         "GCP-IAM-007",
     }
+
+
+def test_cli_handles_report_output_write_error(
+    tmp_path,
+    capsys,
+):
+    input_path = tmp_path / "environment.json"
+
+    input_path.write_text(
+        json.dumps(
+            {
+                "resources": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            str(input_path),
+            "--output",
+            str(tmp_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert captured.out == ""
+    assert "Unable to write security report file" in captured.err
+
+
+def test_cli_handles_graph_output_write_error(
+    tmp_path,
+    capsys,
+):
+    input_path = tmp_path / "environment.json"
+
+    input_path.write_text(
+        json.dumps(
+            {
+                "resources": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            str(input_path),
+            "--graph-output",
+            str(tmp_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert captured.out == ""
+    assert "Unable to write attack graph file" in captured.err
