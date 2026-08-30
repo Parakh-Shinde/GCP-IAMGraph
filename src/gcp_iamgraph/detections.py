@@ -356,19 +356,21 @@ def _impersonation_findings(
 
 def _actas_compute_findings(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> list[Finding]:
-    """Detect VM creation using a privileged service account."""
+    """Detect confirmed VM creation using a privileged service account."""
 
     findings: list[Finding] = []
     privileged = _privileged_targets(index)
     seen: set[tuple[str, str, str]] = set()
+    actas_permission = "iam.serviceAccounts.actAs"
+    compute_permission = "compute.instances.create"
 
     for resource in index.hierarchy.resources.values():
         if resource.resource_type != "service_account":
             continue
 
         service_account_principal = f"serviceAccount:{resource.display_name}"
-
         privileged_grants = privileged.get(
             service_account_principal,
             [],
@@ -377,81 +379,107 @@ def _actas_compute_findings(
         if not privileged_grants:
             continue
 
-        actas_grants = [
-            grant
-            for grant in index.grants_on(resource.name)
-            if (
-                grant.principal != service_account_principal
-                and index.catalog.has_permission(
-                    grant.role,
-                    ("iam.serviceAccounts.actAs"),
-                )
+        actas_results = []
+
+        for grant in index.grants_on(resource.name):
+            if grant.principal == service_account_principal:
+                continue
+
+            if not index.catalog.has_permission(
+                grant.role,
+                actas_permission,
+            ):
+                continue
+
+            actas_result = authorization.evaluate(
+                grant.principal,
+                actas_permission,
+                resource.name,
             )
-        ]
 
-        for actas_grant in actas_grants:
+            if actas_result.decision is not Decision.ALLOW:
+                continue
+
+            actas_results.append((grant, actas_result))
+
+        for actas_grant, actas_result in actas_results:
             for privileged_grant in privileged_grants:
-                compute_grants = index.has_permission(
+                target_name = privileged_grant.target.name
+                compute_result = authorization.evaluate(
                     actas_grant.principal,
-                    privileged_grant.target.name,
-                    "compute.instances.create",
+                    compute_permission,
+                    target_name,
                 )
 
-                for compute_grant in compute_grants:
-                    dedupe = (
-                        actas_grant.principal,
-                        resource.name,
-                        privileged_grant.target.name,
+                if compute_result.decision is not Decision.ALLOW:
+                    continue
+
+                dedupe = (
+                    actas_grant.principal,
+                    resource.name,
+                    target_name,
+                )
+
+                if dedupe in seen:
+                    continue
+
+                seen.add(dedupe)
+
+                evidence = tuple(
+                    dict.fromkeys(
+                        [
+                            *(
+                                (f"{compute_permission}: {item.description}")
+                                for item in compute_result.allow_evidence
+                            ),
+                            *(
+                                (f"{actas_permission}: {item.description}")
+                                for item in actas_result.allow_evidence
+                            ),
+                            privileged_grant.evidence(),
+                        ]
                     )
+                )
 
-                    if dedupe in seen:
-                        continue
-
-                    seen.add(dedupe)
-
-                    findings.append(
-                        Finding(
-                            rule_id="GCP-IAM-006",
-                            title=("VM creation can use a privileged service account"),
-                            severity="critical",
-                            principal=(actas_grant.principal),
-                            resource=(privileged_grant.target.name),
-                            description=(
-                                "The principal can create "
-                                "a Compute Engine instance "
-                                "and attach a privileged "
-                                "service account, allowing "
-                                "access to the service "
-                                "account's permissions."
-                            ),
-                            attack_path=(
-                                actas_grant.principal,
-                                ("compute.instances.create"),
-                                compute_grant.target.name,
-                                ("iam.serviceAccounts.actAs"),
-                                service_account_principal,
-                                privileged_grant.role,
-                                (privileged_grant.target.name),
-                            ),
-                            evidence=(
-                                compute_grant.evidence(),
-                                actas_grant.evidence(),
-                                (privileged_grant.evidence()),
-                            ),
-                            remediation=(
-                                "Do not grant both Compute "
-                                "instance creation and "
-                                "service-account actAs to "
-                                "the same principal. "
-                                "Restrict actAs to "
-                                "non-privileged service "
-                                "accounts and enforce "
-                                "approved service accounts "
-                                "for VM deployments."
-                            ),
-                            references=("MITRE ATT&CK T1548",),
-                        )
+                findings.append(
+                    Finding(
+                        rule_id="GCP-IAM-006",
+                        title=("VM creation can use a privileged service account"),
+                        severity="critical",
+                        principal=actas_grant.principal,
+                        resource=target_name,
+                        description=(
+                            "The principal can create "
+                            "a Compute Engine instance "
+                            "and attach a privileged "
+                            "service account, allowing "
+                            "access to the service "
+                            "account's permissions."
+                        ),
+                        attack_path=(
+                            actas_grant.principal,
+                            compute_permission,
+                            target_name,
+                            actas_permission,
+                            service_account_principal,
+                            privileged_grant.role,
+                            target_name,
+                        ),
+                        evidence=evidence,
+                        remediation=(
+                            "Do not grant both Compute "
+                            "instance creation and "
+                            "service-account actAs to "
+                            "the same principal. "
+                            "Restrict actAs to "
+                            "non-privileged service "
+                            "accounts and enforce "
+                            "approved service accounts "
+                            "for VM deployments."
+                        ),
+                        references=("MITRE ATT&CK T1548",),
                     )
+                )
 
     return findings
 
@@ -672,7 +700,10 @@ def analyze(
             authorization,
         ),
         *_impersonation_findings(index),
-        *_actas_compute_findings(index),
+        *_actas_compute_findings(
+            index,
+            authorization,
+        ),
         *_iam_policy_escalation_findings(
             index,
             authorization,
