@@ -2,7 +2,6 @@ import json
 
 from gcp_iamgraph.cli import main
 
-
 PRINCIPAL = "user:attacker@example.test"
 PERMISSION = "resourcemanager.projects.setIamPolicy"
 ORGANIZATION = "organizations/987654"
