@@ -1,0 +1,42 @@
+{
+  "resources": [
+    {
+      "name": "organizations/987654",
+      "type": "organization",
+      "display_name": "example-security-organization"
+    },
+    {
+      "name": "projects/payments-prod",
+      "type": "project",
+      "display_name": "payments-prod",
+      "parent": "organizations/987654",
+      "bindings": [
+        {
+          "role": "roles/resourcemanager.projectIamAdmin",
+          "members": [
+            "user:developer@example.test"
+          ]
+        }
+      ]
+    }
+  ],
+  "deny_policies": [
+    {
+      "name": "policies/deny-project-iam-changes",
+      "parent": "organizations/987654",
+      "display_name": "Deny project IAM changes",
+      "rules": [
+        {
+          "denied_principals": [
+            "user:developer@example.test"
+          ],
+          "denied_permissions": [
+            "resourcemanager.projects.setIamPolicy"
+          ],
+          "exception_principals": [],
+          "exception_permissions": []
+        }
+      ]
+    }
+  ]
+}
