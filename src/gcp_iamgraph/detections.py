@@ -211,11 +211,15 @@ def _direct_findings(
 
 def _impersonation_edges(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> dict[str, list[tuple[str, Grant]]]:
+    """Build confirmed service-account impersonation edges."""
+
     edges: dict[
         str,
         list[tuple[str, Grant]],
     ] = defaultdict(list)
+    permission = "iam.serviceAccounts.getAccessToken"
 
     for resource in index.hierarchy.resources.values():
         if resource.resource_type != "service_account":
@@ -224,16 +228,36 @@ def _impersonation_edges(
         target_principal = f"serviceAccount:{resource.display_name}"
 
         for grant in index.grants_on(resource.name):
-            if index.catalog.has_permission(
+            if not index.catalog.has_permission(
                 grant.role,
-                ("iam.serviceAccounts.getAccessToken"),
+                permission,
             ):
-                edges[grant.principal].append(
-                    (
-                        target_principal,
-                        grant,
-                    )
+                continue
+
+            result = authorization.evaluate(
+                grant.principal,
+                permission,
+                resource.name,
+            )
+
+            if result.decision is not Decision.ALLOW:
+                continue
+
+            edges[grant.principal].append(
+                (
+                    target_principal,
+                    grant,
                 )
+            )
+
+    for principal_edges in edges.values():
+        principal_edges.sort(
+            key=lambda edge: (
+                edge[0],
+                edge[1].source.name,
+                edge[1].role,
+            )
+        )
 
     return edges
 
@@ -266,8 +290,13 @@ def _privileged_targets(
 
 def _impersonation_findings(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> list[Finding]:
-    edges = _impersonation_edges(index)
+    permission = "iam.serviceAccounts.getAccessToken"
+    edges = _impersonation_edges(
+        index,
+        authorization,
+    )
     privileged = _privileged_targets(index)
     findings: list[Finding] = []
 
@@ -346,7 +375,7 @@ def _impersonation_findings(
                         ],
                         [
                             *evidence,
-                            grant.evidence(),
+                            (f"{permission}: {grant.evidence()}"),
                         ],
                     )
                 )
@@ -699,7 +728,10 @@ def analyze(
             index,
             authorization,
         ),
-        *_impersonation_findings(index),
+        *_impersonation_findings(
+            index,
+            authorization,
+        ),
         *_actas_compute_findings(
             index,
             authorization,
