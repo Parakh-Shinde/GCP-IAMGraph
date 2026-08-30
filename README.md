@@ -2,12 +2,13 @@
 
 [![CI](https://github.com/Parakh-Shinde/GCP-IAMGraph/actions/workflows/ci.yml/badge.svg)](https://github.com/Parakh-Shinde/GCP-IAMGraph/actions/workflows/ci.yml)
 [![GCP IAM Security Scan](https://github.com/Parakh-Shinde/GCP-IAMGraph/actions/workflows/iam-code-scanning.yml/badge.svg)](https://github.com/Parakh-Shinde/GCP-IAMGraph/actions/workflows/iam-code-scanning.yml)
+[![Release](https://img.shields.io/github/v/release/Parakh-Shinde/GCP-IAMGraph?display_name=tag)](https://github.com/Parakh-Shinde/GCP-IAMGraph/releases/latest)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Explainable Google Cloud IAM attack-path and least-privilege analyzer.**
 
-GCP IAMGraph models Google Cloud resource hierarchy, inherited IAM bindings, role permissions, service-account relationships, and privilege-escalation paths. It turns isolated IAM grants into security findings that explain:
+GCP IAMGraph models Google Cloud resource hierarchy, inherited allow and deny policies, role permissions, service-account relationships, and privilege-escalation paths. Its authorization engine returns explicit `ALLOW`, `DENY`, or `UNKNOWN` decisions with structured evidence before permission-based attack paths are confirmed.
 
 - who has access;
 - where the access originates;
@@ -41,6 +42,11 @@ GCP IAMGraph correlates these relationships and produces explainable findings in
 - Google Cloud Asset Inventory IAM-policy JSONL input
 - Organization, folder, project, and resource hierarchy
 - Inherited IAM allow-policy bindings
+- Inherited IAM deny-policy evaluation
+- Deny-rule principal and permission exceptions
+- Explicit `ALLOW`, `DENY`, and `UNKNOWN` authorization decisions
+- Conservative handling of unsupported IAM Conditions
+- Structured and deterministic authorization evidence
 - Predefined and custom role permission resolution
 - Multi-hop service-account impersonation analysis
 - Compute Engine and service-account `actAs` escalation analysis
@@ -104,6 +110,7 @@ Expected:
 Resources analyzed: 2
 Findings: 0
 ```
+
 Deny-policy authorization example:
 
 ```powershell
@@ -133,6 +140,7 @@ the apparent project-owner escalation path from becoming a confirmed finding.
 
 ### Generated evidence
 
+- [Latest release: v0.2.0](https://github.com/Parakh-Shinde/GCP-IAMGraph/releases/tag/v0.2.0)
 - [Vulnerable environment report](docs/demo-output/vulnerable-report.md)
 - [Hardened environment report](docs/demo-output/hardened-report.md)
 - [SARIF 2.1.0 findings](docs/demo-output/iam-findings.sarif)
@@ -186,14 +194,14 @@ the apparent project-owner escalation path from becoming a confirmed finding.
 
 ```mermaid
 flowchart TD
-    A["IAMGraph JSON or CAI JSONL"] --> B["Validated input parser"]
-    B --> C["Resource hierarchy"]
-    C --> D["Effective access index"]
-    D --> E["Detection engine"]
-    E --> F["Explainable findings"]
-    F --> G["JSON / Markdown / SARIF"]
-    F --> H["JSON / Graphviz attack graph"]
-    G --> I["GitHub Code Scanning"]
+    A["IAMGraph JSON or CAI JSONL"] --> B["Validated policy parser"]
+    B --> C["Resource hierarchy and access index"]
+    C --> D["Authorization engine"]
+    D --> E["ALLOW / DENY / UNKNOWN with evidence"]
+    E --> F["Authorization-aware detections"]
+    F --> G["Reports and attack graphs"]
+    G --> H["JSON / Markdown / SARIF / Graphviz"]
+    H --> I["GitHub Code Scanning"]
 ```
 
 ## Design documents
@@ -489,11 +497,13 @@ gcp-iamgraph/
 │       ├── ci.yml
 │       └── iam-code-scanning.yml
 ├── examples/
+│   ├── deny-policy-environment.json
 │   ├── hardened-environment.json
 │   └── vulnerable-environment.json
 ├── src/
 │   └── gcp_iamgraph/
 │       ├── access.py
+│       ├── authorization.py
 │       ├── cli.py
 │       ├── detections.py
 │       ├── graph.py
@@ -511,10 +521,10 @@ gcp-iamgraph/
 
 ## Development
 
-Install test and lint tools:
+Install the project and development tools:
 
 ```bash
-pip install -e . pytest ruff
+pip install -e ".[dev]"
 ```
 
 Run formatting:
@@ -535,7 +545,7 @@ Run the test suite:
 pytest -q
 ```
 
-The project currently includes 25 automated tests covering:
+The project currently includes 74 automated tests covering:
 
 - models and parsing;
 - hierarchy inheritance;
@@ -569,8 +579,8 @@ Current limitations include:
 
 - a security-focused subset of predefined role permissions;
 - no automatic retrieval of custom-role definitions from Google Cloud;
-- IAM Conditions are preserved but not evaluated;
-- IAM deny policies are not evaluated;
+- IAM Conditions are preserved; unsupported expressions produce `UNKNOWN`;
+- IAMGraph JSON deny policies are evaluated, but Cloud Asset Inventory deny-policy ingestion is not yet implemented;
 - principal access boundaries are not evaluated;
 - Google Group membership is not expanded;
 - organization policies and product-specific ACLs are not evaluated;
@@ -581,13 +591,6 @@ It is not a replacement for Google Cloud Policy Analyzer, Security Command Cente
 See [CHANGELOG.md](CHANGELOG.md) for release history and `v0.2.0` authorization-engine changes.
 
 ## Roadmap
-
-- Automatic predefined-role catalog synchronization
-- Live, read-only Google Cloud collector
-- Expanded CEL evaluation for IAM Conditions
-
-## Roadmap
-
 
 - Automatic predefined-role catalog synchronization
 - Live, read-only Google Cloud collector
