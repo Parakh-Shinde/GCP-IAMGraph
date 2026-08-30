@@ -8,7 +8,7 @@ from typing import Any, cast
 from .models import Finding
 
 TOOL_NAME = "GCP IAMGraph"
-TOOL_VERSION = "0.1.1"
+TOOL_VERSION = "0.2.0"
 
 SARIF_SCHEMA = (
     "https://docs.oasis-open.org/sarif/"

@@ -1,7 +1,7 @@
 {
   "tool": "GCP IAMGraph",
-  "version": "0.1.1",
-  "generated_at": "2026-08-29T12:45:37.630982+00:00",
+  "version": "0.2.0",
+  "generated_at": "2026-08-30T17:48:34.465382+00:00",
   "source_path": "examples\\vulnerable-environment.json",
   "summary": {
     "resources_analyzed": 5,
@@ -85,7 +85,7 @@
         "projects/payments-prod"
       ],
       "evidence": [
-        "user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
+        "iam.serviceAccounts.getAccessToken: user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
         "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
       ],
       "remediation": "Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
