@@ -60,6 +60,7 @@ def _finding_for_privileged_grant(
 
 def _direct_findings(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> list[Finding]:
     findings: list[Finding] = []
     seen: set[tuple[str, str, str]] = set()
@@ -158,6 +159,15 @@ def _direct_findings(
                         grant.role,
                         permission,
                     ):
+                        continue
+
+                    authorization_result = authorization.evaluate(
+                        grant.principal,
+                        permission,
+                        grant.target.name,
+                    )
+
+                    if authorization_result.decision is not Decision.ALLOW:
                         continue
 
                     dedupe = (
@@ -535,8 +545,9 @@ def _iam_policy_escalation_findings(
 
 def _privileged_service_account_key_findings(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> list[Finding]:
-    """Detect key creation for a privileged service account."""
+    """Detect confirmed key creation for a privileged service account."""
 
     findings: list[Finding] = []
     privileged = _privileged_targets(index)
@@ -557,17 +568,28 @@ def _privileged_service_account_key_findings(
         if not privileged_grants:
             continue
 
-        key_creation_grants = [
-            grant
-            for grant in index.grants_on(resource.name)
-            if (
-                grant.principal != service_account_principal
-                and index.catalog.has_permission(
-                    grant.role,
-                    permission,
-                )
+        key_creation_grants: list[Grant] = []
+
+        for grant in index.grants_on(resource.name):
+            if grant.principal == service_account_principal:
+                continue
+
+            if not index.catalog.has_permission(
+                grant.role,
+                permission,
+            ):
+                continue
+
+            authorization_result = authorization.evaluate(
+                grant.principal,
+                permission,
+                resource.name,
             )
-        ]
+
+            if authorization_result.decision is not Decision.ALLOW:
+                continue
+
+            key_creation_grants.append(grant)
 
         for key_grant in key_creation_grants:
             for privileged_grant in privileged_grants:
@@ -645,14 +667,20 @@ def analyze(
     )
 
     findings = [
-        *_direct_findings(index),
+        *_direct_findings(
+            index,
+            authorization,
+        ),
         *_impersonation_findings(index),
         *_actas_compute_findings(index),
         *_iam_policy_escalation_findings(
             index,
             authorization,
         ),
-        *_privileged_service_account_key_findings(index),
+        *_privileged_service_account_key_findings(
+            index,
+            authorization,
+        ),
     ]
 
     severity_rank = {
