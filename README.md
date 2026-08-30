@@ -63,11 +63,12 @@ GCP IAMGraph includes reproducible vulnerable and hardened environments, automat
 
 | Verification | Result |
 | --- | --- |
-| Automated test suite | 27 tests passed |
-| Test coverage | 87.96% with an 85% minimum CI gate |
+| Automated test suite | 74 tests passed |
+| Test coverage | 91.33% with an 85% minimum CI gate |
 | Ruff static checks | All checks passed |
 | Vulnerable example | 5 resources analyzed, 8 findings |
 | Hardened example | 2 resources analyzed, 0 findings |
+| Deny-policy example | 2 resources analyzed, 0 confirmed findings |
 | GitHub Code Scanning | 8 IAM security alerts uploaded |
 | SARIF | Valid SARIF 2.1.0 output |
 | Attack graph | JSON, DOT, SVG, and PNG |
@@ -103,6 +104,27 @@ Expected:
 Resources analyzed: 2
 Findings: 0
 ```
+Deny-policy authorization example:
+
+```powershell
+gcp-iamgraph examples\deny-policy-environment.json `
+  --format json `
+  --output deny-policy-report.json
+```
+
+Expected:
+
+```text
+Resources analyzed: 2
+Findings: 0
+```
+
+The developer has an allow binding containing
+`resourcemanager.projects.setIamPolicy`, but an inherited organization-level
+deny policy blocks that permission. The authorization engine therefore prevents
+the apparent project-owner escalation path from becoming a confirmed finding.
+
+
 > [!IMPORTANT]
 > The GitHub Code Scanning alerts shown in this repository are intentionally
 > generated from the fictional `examples/vulnerable-environment.json` IAM
@@ -556,12 +578,20 @@ Current limitations include:
 
 It is not a replacement for Google Cloud Policy Analyzer, Security Command Center, or a formal cloud-security review.
 
+See [CHANGELOG.md](CHANGELOG.md) for release history and the planned `v0.2.0` changes.
+
 ## Roadmap
 
 - Automatic predefined-role catalog synchronization
 - Live, read-only Google Cloud collector
-- IAM Conditions evaluation
-- Deny-policy analysis
+- Expanded CEL evaluation for IAM Conditions
+
+## Roadmap
+
+
+- Automatic predefined-role catalog synchronization
+- Live, read-only Google Cloud collector
+- Expanded CEL evaluation for IAM Conditions
 - Google Group expansion
 - Principal access boundary support
 - Terraform IAM ingestion

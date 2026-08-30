@@ -1,9 +1,29 @@
 # Authorization Engine Design
 
-Status: Proposed  
-Target release: `v0.2.0`  
-Primary owner: Parakh Shinde  
-Last updated: 2026-08-29
+Status: Implemented — initial `v0.2.0` scope
+Target release: `v0.2.0`
+Primary owner: Parakh Shinde
+Last updated: 2026-08-30
+
+## Implementation status
+
+The initial authorization-engine scope is implemented and integrated into attack-path detection.
+
+Implemented capabilities include:
+
+- inherited allow-policy evaluation;
+- inherited deny-policy evaluation;
+- deny-rule principal and permission exceptions;
+- explicit `ALLOW`, `DENY`, and `UNKNOWN` decisions;
+- structured and deterministic decision evidence;
+- conservative handling of unsupported conditions;
+- authorization-aware IAM-policy escalation;
+- authorization-aware service-account key creation;
+- authorization-aware `actAs` and Compute Engine paths;
+- authorization-aware multi-hop impersonation;
+- end-to-end deny-policy CLI integration tests.
+
+The implementation does not claim complete parity with Google Cloud authorization. Full CEL evaluation, principal access boundaries, group expansion, organization-policy constraints, and product-specific authorization remain future work.
 
 ## Summary
 
