@@ -6,7 +6,7 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-Target release: `v0.2.0`
+## [0.2.0] - 2026-08-30
 
 ### Added
 
@@ -71,6 +71,7 @@ Target release: `v0.2.0`
 - Markdown and JSON reporting.
 - CI failure thresholds.
 
-[Unreleased]: https://github.com/Parakh-Shinde/GCP-IAMGraph/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Parakh-Shinde/GCP-IAMGraph/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Parakh-Shinde/GCP-IAMGraph/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Parakh-Shinde/GCP-IAMGraph/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Parakh-Shinde/GCP-IAMGraph/releases/tag/v0.1.0

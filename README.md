@@ -578,7 +578,7 @@ Current limitations include:
 
 It is not a replacement for Google Cloud Policy Analyzer, Security Command Center, or a formal cloud-security review.
 
-See [CHANGELOG.md](CHANGELOG.md) for release history and the planned `v0.2.0` changes.
+See [CHANGELOG.md](CHANGELOG.md) for release history and `v0.2.0` authorization-engine changes.
 
 ## Roadmap
 

@@ -559,7 +559,7 @@ Test:
 
 ### Regression tests
 
-All existing 27 tests must continue to pass during the compatibility phase.
+All existing tests must continue to pass during the compatibility phase.
 
 ### Future property tests
 
@@ -622,7 +622,7 @@ Existing CLI commands and report formats must remain compatible unless a separat
 
 The first authorization-engine release is complete when:
 
-1. Existing 27 tests continue to pass.
+1. Existing tests continue to pass.
 2. New deny-policy tests pass.
 3. Coverage remains above the enforced threshold.
 4. An organization deny overrides a project allow.

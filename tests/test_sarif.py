@@ -42,7 +42,7 @@ def test_report_can_be_rendered_as_sarif():
     driver = run["tool"]["driver"]
 
     assert driver["name"] == "GCP IAMGraph"
-    assert driver["version"] == "0.1.1"
+    assert driver["version"] == "0.2.0"
 
     rules = {rule["id"]: rule for rule in driver["rules"]}
 

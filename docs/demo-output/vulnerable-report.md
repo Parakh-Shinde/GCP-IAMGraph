@@ -55,7 +55,7 @@ A principal can change project IAM bindings and grant additional access.
 The principal can obtain short-lived credentials for a service account with broad access.
 
 **Evidence**
-- user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com
+- iam.serviceAccounts.getAccessToken: user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com
 - serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod
 
 **Remediation:** Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.

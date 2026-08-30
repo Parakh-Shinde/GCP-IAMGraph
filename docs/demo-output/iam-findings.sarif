@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "GCP IAMGraph",
-          "version": "0.1.1",
+          "version": "0.2.0",
           "rules": [
             {
               "id": "GCP-IAM-001",
@@ -335,7 +335,7 @@
               "projects/payments-prod"
             ],
             "evidence": [
-              "user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
+              "iam.serviceAccounts.getAccessToken: user:developer@example.test has roles/iam.serviceAccountTokenCreator on projects/payments-prod/serviceAccounts/deployment@payments-prod.iam.gserviceaccount.com",
               "serviceAccount:deployment@payments-prod.iam.gserviceaccount.com has roles/owner on projects/payments-prod"
             ],
             "remediation": "Remove unnecessary Token Creator bindings and grant impersonation only on narrowly scoped service accounts.",
