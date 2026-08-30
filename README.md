@@ -10,6 +10,8 @@
 
 GCP IAMGraph models Google Cloud resource hierarchy, inherited allow and deny policies, role permissions, service-account relationships, and privilege-escalation paths. Its authorization engine returns explicit `ALLOW`, `DENY`, or `UNKNOWN` decisions with structured evidence before permission-based attack paths are confirmed.
 
+Each result explains:
+
 - who has access;
 - where the access originates;
 - how the permission is inherited;
@@ -547,8 +549,10 @@ pytest -q
 
 The project currently includes 74 automated tests covering:
 
-- models and parsing;
+- models and policy parsing;
 - hierarchy inheritance;
+- allow and deny authorization decisions;
+- deny-rule exceptions and conservative condition handling;
 - predefined and custom roles;
 - direct risk detections;
 - multi-hop attack paths;
