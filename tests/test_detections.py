@@ -1,7 +1,10 @@
 from pathlib import Path
 
 from gcp_iamgraph.detections import analyze
-from gcp_iamgraph.models import Resource
+from gcp_iamgraph.models import (
+    DenyPolicy,
+    Resource,
+)
 from gcp_iamgraph.parser import load_environment
 
 EXAMPLES = Path(__file__).parents[1] / "examples"
@@ -138,7 +141,7 @@ def test_set_iam_policy_can_escalate_to_project_owner():
 
     assert finding.severity == "critical"
     assert finding.principal == attacker
-    assert finding.resource == ("projects/payments-prod")
+    assert finding.resource == "projects/payments-prod"
     assert finding.attack_path == (
         attacker,
         "resourcemanager.projects.setIamPolicy",
@@ -207,3 +210,106 @@ def test_key_creation_reaches_privileged_service_account():
         project.name,
         "Project compromise",
     )
+
+
+def _project_iam_admin_environment():
+    principal = "user:attacker@example.test"
+
+    organization = Resource.from_dict(
+        {
+            "name": "organizations/987654",
+            "type": "organization",
+        }
+    )
+
+    project = Resource.from_dict(
+        {
+            "name": "projects/payments-prod",
+            "type": "project",
+            "parent": organization.name,
+            "bindings": [
+                {
+                    "role": ("roles/resourcemanager.projectIamAdmin"),
+                    "members": [principal],
+                }
+            ],
+        }
+    )
+
+    return principal, organization, project
+
+
+def _project_iam_deny_policy(
+    principal,
+    *,
+    exception_principals=None,
+    condition=None,
+):
+    return DenyPolicy.from_dict(
+        {
+            "name": "policies/deny-project-iam",
+            "parent": "organizations/987654",
+            "rules": [
+                {
+                    "denied_principals": [principal],
+                    "denied_permissions": [("resourcemanager.projects.setIamPolicy")],
+                    "exception_principals": (exception_principals or []),
+                    "condition": condition,
+                }
+            ],
+        }
+    )
+
+
+def test_deny_policy_suppresses_confirmed_iam_escalation():
+    principal, organization, project = _project_iam_admin_environment()
+    policy = _project_iam_deny_policy(principal)
+
+    findings = analyze(
+        [
+            organization,
+            project,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert not any(item.rule_id == "GCP-IAM-007" for item in findings)
+
+
+def test_conditional_deny_does_not_create_confirmed_escalation():
+    principal, organization, project = _project_iam_admin_environment()
+    policy = _project_iam_deny_policy(
+        principal,
+        condition={
+            "title": "Production resources",
+            "expression": ("resource.name.startsWith('projects/prod-')"),
+        },
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert not any(item.rule_id == "GCP-IAM-007" for item in findings)
+
+
+def test_deny_principal_exception_preserves_escalation():
+    principal, organization, project = _project_iam_admin_environment()
+    policy = _project_iam_deny_policy(
+        principal,
+        exception_principals=[principal],
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert any(item.rule_id == "GCP-IAM-007" for item in findings)

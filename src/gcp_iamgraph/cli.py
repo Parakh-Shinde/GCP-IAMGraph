@@ -10,6 +10,7 @@ from .graph import as_dot, build_attack_graph
 from .parser import (
     InputError,
     load_cloud_asset_inventory,
+    load_deny_policies,
     load_environment,
     load_role_definitions,
 )
@@ -103,13 +104,16 @@ def main(
         if args.input_format == "cai":
             resources = load_cloud_asset_inventory(args.input)
             role_definitions = []
+            deny_policies = []
         else:
             resources = load_environment(args.input)
             role_definitions = load_role_definitions(args.input)
+            deny_policies = load_deny_policies(args.input)
 
         findings = analyze(
             resources,
             role_definitions,
+            deny_policies,
         )
     except (InputError, ValueError) as exc:
         print(

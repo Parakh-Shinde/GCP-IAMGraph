@@ -4,8 +4,17 @@ from collections import defaultdict, deque
 from collections.abc import Iterable
 
 from .access import AccessIndex, Grant
+from .authorization import (
+    AuthorizationEngine,
+    Decision,
+)
 from .hierarchy import Hierarchy
-from .models import Finding, Resource, RoleDefinition
+from .models import (
+    DenyPolicy,
+    Finding,
+    Resource,
+    RoleDefinition,
+)
 from .roles import RoleCatalog
 
 PUBLIC_PRINCIPALS = {
@@ -439,8 +448,9 @@ def _actas_compute_findings(
 
 def _iam_policy_escalation_findings(
     index: AccessIndex,
+    authorization: AuthorizationEngine,
 ) -> list[Finding]:
-    """Detect IAM policy modification leading to Owner access."""
+    """Detect confirmed IAM policy modification leading to Owner."""
 
     findings: list[Finding] = []
     seen: set[tuple[str, str]] = set()
@@ -451,9 +461,8 @@ def _iam_policy_escalation_findings(
             continue
 
         for grant in index.grants_on(resource.name):
-            # Owner is already reported by
-            # GCP-IAM-001 and does not need a
-            # separate escalation finding.
+            # Owner is already reported by GCP-IAM-001
+            # and does not require a separate escalation finding.
             if grant.role == "roles/owner":
                 continue
 
@@ -461,6 +470,17 @@ def _iam_policy_escalation_findings(
                 grant.role,
                 permission,
             ):
+                continue
+
+            decision = authorization.evaluate(
+                grant.principal,
+                permission,
+                resource.name,
+            )
+
+            # DENY and UNKNOWN must not create a confirmed
+            # attack path.
+            if decision.decision is not Decision.ALLOW:
                 continue
 
             dedupe = (
@@ -472,6 +492,10 @@ def _iam_policy_escalation_findings(
                 continue
 
             seen.add(dedupe)
+
+            authorization_evidence = tuple(
+                item.description for item in decision.allow_evidence
+            )
 
             findings.append(
                 Finding(
@@ -493,7 +517,7 @@ def _iam_policy_escalation_findings(
                         "grant roles/owner",
                         "Project compromise",
                     ),
-                    evidence=(grant.evidence(),),
+                    evidence=authorization_evidence,
                     remediation=(
                         "Restrict project IAM policy "
                         "modification to a controlled "
@@ -603,19 +627,31 @@ def _privileged_service_account_key_findings(
 def analyze(
     resources: list[Resource],
     role_definitions: Iterable[RoleDefinition] = (),
+    deny_policies: Iterable[DenyPolicy] = (),
 ) -> list[Finding]:
+    role_definition_list = list(role_definitions)
+    deny_policy_list = list(deny_policies)
+
     hierarchy = Hierarchy(resources)
-    catalog = RoleCatalog(role_definitions)
+    catalog = RoleCatalog(role_definition_list)
     index = AccessIndex(
         hierarchy,
         catalog,
+    )
+    authorization = AuthorizationEngine(
+        resources,
+        deny_policy_list,
+        role_definition_list,
     )
 
     findings = [
         *_direct_findings(index),
         *_impersonation_findings(index),
         *_actas_compute_findings(index),
-        *_iam_policy_escalation_findings(index),
+        *_iam_policy_escalation_findings(
+            index,
+            authorization,
+        ),
         *_privileged_service_account_key_findings(index),
     ]
 
