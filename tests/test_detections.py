@@ -364,3 +364,189 @@ def test_key_deny_exception_preserves_confirmed_paths():
     rule_ids = {item.rule_id for item in findings}
     assert "GCP-IAM-004" in rule_ids
     assert "GCP-IAM-008" in rule_ids
+
+
+def _actas_environment():
+    developer = "user:developer@example.test"
+    service_account = "serviceAccount:runtime@payments-prod.iam.gserviceaccount.com"
+
+    organization = Resource.from_dict(
+        {
+            "name": "organizations/987654",
+            "type": "organization",
+        }
+    )
+    project = Resource.from_dict(
+        {
+            "name": "projects/payments-prod",
+            "type": "project",
+            "parent": organization.name,
+            "bindings": [
+                {
+                    "role": "roles/editor",
+                    "members": [developer],
+                },
+                {
+                    "role": "roles/owner",
+                    "members": [service_account],
+                },
+            ],
+        }
+    )
+    service_account_resource = Resource.from_dict(
+        {
+            "name": (
+                "projects/payments-prod/"
+                "serviceAccounts/"
+                "runtime@payments-prod."
+                "iam.gserviceaccount.com"
+            ),
+            "type": "service_account",
+            "display_name": ("runtime@payments-prod.iam.gserviceaccount.com"),
+            "parent": project.name,
+            "bindings": [
+                {
+                    "role": ("roles/iam.serviceAccountUser"),
+                    "members": [developer],
+                }
+            ],
+        }
+    )
+
+    return (
+        developer,
+        organization,
+        project,
+        service_account_resource,
+    )
+
+
+def _actas_deny_policy(
+    developer,
+    permission,
+    *,
+    exception_permissions=None,
+    condition=None,
+):
+    return DenyPolicy.from_dict(
+        {
+            "name": "policies/deny-actas-path",
+            "parent": "organizations/987654",
+            "rules": [
+                {
+                    "denied_principals": [developer],
+                    "denied_permissions": [permission],
+                    "exception_permissions": (exception_permissions or []),
+                    "condition": condition,
+                }
+            ],
+        }
+    )
+
+
+def test_actas_deny_suppresses_vm_escalation_path():
+    (
+        developer,
+        organization,
+        project,
+        service_account,
+    ) = _actas_environment()
+    permission = "iam.serviceAccounts.actAs"
+    policy = _actas_deny_policy(
+        developer,
+        permission,
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+            service_account,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert not any(item.rule_id == "GCP-IAM-006" for item in findings)
+
+
+def test_compute_create_deny_suppresses_vm_escalation_path():
+    (
+        developer,
+        organization,
+        project,
+        service_account,
+    ) = _actas_environment()
+    permission = "compute.instances.create"
+    policy = _actas_deny_policy(
+        developer,
+        permission,
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+            service_account,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert not any(item.rule_id == "GCP-IAM-006" for item in findings)
+
+
+def test_conditional_actas_deny_suppresses_confirmed_path():
+    (
+        developer,
+        organization,
+        project,
+        service_account,
+    ) = _actas_environment()
+    policy = _actas_deny_policy(
+        developer,
+        "iam.serviceAccounts.actAs",
+        condition={
+            "title": "Production only",
+            "expression": ("resource.name.startsWith('projects/payments-prod')"),
+        },
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+            service_account,
+        ],
+        deny_policies=[policy],
+    )
+
+    assert not any(item.rule_id == "GCP-IAM-006" for item in findings)
+
+
+def test_actas_permission_exception_preserves_vm_path():
+    (
+        developer,
+        organization,
+        project,
+        service_account,
+    ) = _actas_environment()
+    permission = "iam.serviceAccounts.actAs"
+    policy = _actas_deny_policy(
+        developer,
+        permission,
+        exception_permissions=[permission],
+    )
+
+    findings = analyze(
+        [
+            organization,
+            project,
+            service_account,
+        ],
+        deny_policies=[policy],
+    )
+
+    finding = next(item for item in findings if item.rule_id == "GCP-IAM-006")
+
+    assert finding.principal == developer
+    assert any("compute.instances.create" in item for item in finding.evidence)
+    assert any("iam.serviceAccounts.actAs" in item for item in finding.evidence)
